@@ -1,0 +1,12 @@
++-------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| date         | incident   | impact     | minutes | assigned_to         | detail                                                                             |
++-------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| "2025-07-08" | "INC-1041" | "degraded" | 190     | "Payments Platform" | "Cache evictions; hit rate fell to 44%"                                            |
+| "2025-10-21" | "INC-1058" | "degraded" | 215     | "Payments Platform" | "Cache evictions; hit rate fell to 41%"                                            |
+| "2026-01-14" | "INC-1077" | "degraded" | 160     | "Identity & Access" | "Cache evictions; hit rate fell to 38%; logins slow but succeeded"                 |
+| "2026-03-30" | "INC-1093" | "outage"   | 305     | "Lending"           | "Cache evictions; hit rate fell to 21%"                                            |
+| "2026-06-17" | "INC-1120" | "degraded" | 175     | "Digital Channels"  | "Cache evictions; hit rate fell to 36%"                                            |
+| "2026-08-11" | "INC-1135" | "outage"   | 280     | "Digital Channels"  | "Cache evictions; hit rate fell to 9%; entitlements-svc failed rather than slowed" |
++-------------------------------------------------------------------------------------------------------------------------------------------------------------+
+
+6 rows

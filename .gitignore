@@ -1,0 +1,10 @@
+# Secrets
+.env
+*.license
+# Build scratch
+build/.work/
+__pycache__/
+.DS_Store
+
+# Old things
+old/

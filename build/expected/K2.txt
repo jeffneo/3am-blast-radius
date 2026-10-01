@@ -1,0 +1,17 @@
++---------------------+
+| rel           | n   |
++---------------------+
+| "AFFECTED"    | 405 |
+| "ASSIGNED_TO" | 231 |
+| "COVERS"      | 72  |
+| "DEPENDS_ON"  | 617 |
+| "DEPLOYED_TO" | 455 |
+| "FIRED_ON"    | 19  |
+| "OWNED_BY"    | 30  |
+| "OWNS"        | 264 |
+| "REQUIRES"    | 57  |
+| "ROOT_CAUSE"  | 212 |
+| "USES_CERT"   | 98  |
++---------------------+
+
+11 rows

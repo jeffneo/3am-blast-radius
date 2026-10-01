@@ -1,0 +1,9 @@
++-----------------------------------------------------------------------------------------------------------------------------------------------------------+
+| coverage            | components | most_critical_examples                                                                                                 |
++-----------------------------------------------------------------------------------------------------------------------------------------------------------+
+| "no runbook"        | 35         | ["customer-profile-svc", "entitlements-svc", "ach-origination-svc", "agent-desktop-svc", "auth-proxy", "bill-pay-svc"] |
+| "runbook (current)" | 3          | ["auth-gateway", "mobile-bff", "rtp-svc"]                                                                              |
+| "runbook (stale)"   | 11         | ["p2p-transfer-svc", "sanctions-screening", "web-bff", "wire-svc", "cash-mgmt-portal", "payee-verification-svc"]       |
++-----------------------------------------------------------------------------------------------------------------------------------------------------------+
+
+3 rows

@@ -1,0 +1,22 @@
++---------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| team                    | status      | pager              | owns_in_radius | examples                                                                                    |
++---------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| "Payments Platform"     | "active"    | "payments-oncall"  | 9              | ["ach-origination-svc", "bill-pay-svc", "fx-quote-svc", "p2p-transfer-svc"]                 |
+| "Digital Channels"      | "active"    | "digital-oncall"   | 7              | ["alerts-preferences-svc", "document-upload-svc", "mobile-bff", "open-account-svc"]         |
+| "Cards"                 | "active"    | "cards-oncall"     | 5              | ["card-activation-svc", "card-controls-svc", "card-issuance-svc", "rewards-redemption-svc"] |
+| "Lending"               | "active"    | "lending-oncall"   | 4              | ["collections-svc", "loan-origination-svc", "loan-servicing-svc", "payment-plan-svc"]       |
+| "Corporate Banking"     | "active"    | "corpbank-oncall"  | 3              | ["cash-mgmt-portal", "payroll-svc", "positive-pay-svc"]                                     |
+| "Customer Support Tech" | "active"    | "support-oncall"   | 3              | ["agent-desktop-svc", "chat-gateway", "screen-pop-svc"]                                     |
+| "Data Platform"         | "active"    | "dataplat-oncall"  | 3              | ["customer-profile-svc", "customer-segments-svc", "profile-cache"]                          |
+| "Identity & Access"     | "active"    | "iam-oncall"       | 3              | ["auth-gateway", "entitlements-svc", "sso-federation-svc"]                                  |
+| "Marketing Tech"        | "active"    | "martech-oncall"   | 3              | ["audience-builder", "campaign-svc", "offers-engine"]                                       |
+| "Wealth"                | "active"    | "wealth-oncall"    | 3              | ["advisor-portal-svc", "order-routing-svc", "trade-order-svc"]                              |
+| "Branch & ATM Tech"     | "active"    | "branch-oncall"    | 1              | ["teller-app-svc"]                                                                          |
+| "Legacy Platform"       | "disbanded" | NULL               | 1              | ["legacy-profile-lookup"]                                                                   |
+| "Merchant Services"     | "active"    | "merchant-oncall"  | 1              | ["merchant-portal-svc"]                                                                     |
+| "Messaging Platform"    | "active"    | "messaging-oncall" | 1              | ["preference-sync-svc"]                                                                     |
+| "Shared Services"       | "disbanded" | NULL               | 1              | ["auth-proxy"]                                                                              |
+| "Treasury Tech"         | "active"    | "treasury-oncall"  | 1              | ["fx-hedging-svc"]                                                                          |
++---------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+
+16 rows

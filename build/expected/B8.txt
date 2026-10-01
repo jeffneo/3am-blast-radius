@@ -1,0 +1,18 @@
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| change     | service                  | what                                         | deployed_at        | hours_before_page | in_radius | hops_from_cache | had_risk_review |
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| "CHG-2301" | "customer-profile-svc"   | "Config: profile cache TTL 24h to 1h"        | "2026-09-29T22:15" | 4                 | "yes"     | 1               | FALSE           |
+| "CHG-2304" | "entitlements-svc"       | "Dependency upgrade: http client 4.2"        | "2026-09-29T19:40" | 7                 | "yes"     | 2               | TRUE            |
+| "CHG-2299" | "bill-pay-svc"           | "Deploy v2.8"                                | "2026-09-29T14:00" | 13                | "yes"     | 3               | TRUE            |
+| "CHG-2306" | "mobile-bff"             | "Feature flag rollout: new login screen 25%" | "2026-09-29T17:00" | 10                | "yes"     | 4               | TRUE            |
+| "CHG-2305" | "tracing-collector"      | "Config: sampling rate 10% to 5%"            | "2026-09-30T01:10" | 1                 | "no"      | NULL            | TRUE            |
+| "CHG-2312" | "trade-finance-svc"      | "Deploy v3.4.7"                              | "2026-09-30T01:04" | 2                 | "no"      | NULL            | TRUE            |
+| "CHG-2311" | "consent-ledger"         | "Deploy v8.3.9"                              | "2026-09-30T00:04" | 3                 | "no"      | NULL            | TRUE            |
+| "CHG-2310" | "batch-scheduler"        | "Dependency upgrade: metrics agent"          | "2026-09-29T21:31" | 5                 | "no"      | NULL            | TRUE            |
+| "CHG-2303" | "card-dispute-svc"       | "Deploy v1.9"                                | "2026-09-29T20:00" | 7                 | "no"      | NULL            | TRUE            |
+| "CHG-2309" | "log-pipeline"           | "Config: log level change"                   | "2026-09-29T13:22" | 13                | "no"      | NULL            | TRUE            |
+| "CHG-2308" | "treasury-reporting-svc" | "Dependency upgrade: http client"            | "2026-09-29T07:13" | 19                | "no"      | NULL            | TRUE            |
+| "CHG-2307" | "password-reset-svc"     | "Feature flag rollout 25%"                   | "2026-09-29T03:37" | 23                | "no"      | NULL            | TRUE            |
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+
+12 rows

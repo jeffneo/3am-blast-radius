@@ -1,0 +1,17 @@
++---------------------+
+| label         | n   |
++---------------------+
+| "Alert"       | 19  |
+| "Certificate" | 34  |
+| "Change"      | 455 |
+| "Checkin"     | 1   |
+| "Component"   | 232 |
+| "Datastore"   | 57  |
+| "Incident"    | 228 |
+| "Journey"     | 30  |
+| "Runbook"     | 71  |
+| "Service"     | 175 |
+| "Team"        | 25  |
++---------------------+
+
+11 rows

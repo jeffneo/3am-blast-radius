@@ -1,0 +1,155 @@
+# 3 a.m. Blast Radius: local development stack
+#
+#   docker compose up -d                 Neo4j (APOC + GDS Enterprise) + Enterprise Studio
+#   docker compose run --rm loader       load graph/load.cypher into the lab database
+#   make help                            the same, with shortcuts
+#
+# Configuration comes from .env (copy .env.example). License files are signed
+# JWTs, gitignored and referenced from here, never copied into an image:
+#   ./gds.license  GDS Enterprise    (sub: neo4j-gds)
+#   ./nes.license  Enterprise Studio (sub: neo4j-enterprise-studio)
+#
+# This stack is for building and demoing. The lab itself targets Neo4j 5.26
+# with no GDS; build/verify.py tests that separately.
+
+name: blast-radius
+
+services:
+  neo4j:
+    image: ${NEO4J_IMAGE:-neo4j:2026.08.1-enterprise}
+    container_name: br-neo4j
+    ports:
+      - "${NEO4J_HTTP_PORT:-7481}:7474"   # Neo4j Browser / HTTP
+      - "${NEO4J_BOLT_PORT:-7694}:7687"   # Bolt
+    environment:
+      NEO4J_AUTH: "${NEO4J_USERNAME:-neo4j}/${NEO4J_PASSWORD:?set NEO4J_PASSWORD in .env}"
+      NEO4J_ACCEPT_LICENSE_AGREEMENT: "${NEO4J_ACCEPT_LICENSE_AGREEMENT:-eval}"
+      NEO4J_PLUGINS: '["apoc","graph-data-science"]'
+      # GDS Enterprise. Without this the plugin loads in the community tier,
+      # which caps projections. Config key is gds.enterprise.license_file; in
+      # env form dots become '_' and literal underscores become '__'.
+      NEO4J_gds_enterprise_license__file: /licenses/gds.license
+      NEO4J_dbms_security_procedures_unrestricted: "apoc.*,gds.*"
+      NEO4J_dbms_security_procedures_allowlist: "apoc.*,gds.*"
+      # Make the lab database the DEFAULT one. Otherwise Browser, Studio and a
+      # bare cypher-shell all open on the empty `neo4j` database and the demo
+      # starts on a blank screen. Applies on first boot of a fresh volume only.
+      NEO4J_initial_dbms_default__database: "${NEO4J_DATABASE:-blastradius}"
+      NEO4J_server_memory_heap_initial__size: ${NEO4J_HEAP:-1G}
+      NEO4J_server_memory_heap_max__size: ${NEO4J_HEAP:-1G}
+      NEO4J_server_memory_pagecache_size: ${NEO4J_PAGECACHE:-512M}
+    volumes:
+      - neo4j-data:/data
+      - neo4j-logs:/logs
+      - neo4j-plugins:/plugins
+      # Licenses are referenced, never copied into the image or committed.
+      - ${GDS_LICENSE_PATH:-./gds.license}:/licenses/gds.license:ro
+    healthcheck:
+      # cypher-shell against the real bolt endpoint; HTTP 200 lies during startup.
+      # The password is read back out of NEO4J_AUTH (user/password) inside the
+      # container, so it is not repeated in this file or visible in `inspect`.
+      test: ["CMD-SHELL", "cypher-shell -u $${NEO4J_AUTH%%/*} -p \"$${NEO4J_AUTH#*/}\" 'RETURN 1' || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 30
+      start_period: 60s
+    restart: unless-stopped
+
+  # One-shot: loads the graph into the lab database, then exits. Safe to repeat
+  # (every statement is a MERGE). Kept out of `up` so a restart never re-loads.
+  loader:
+    image: ${NEO4J_IMAGE:-neo4j:2026.08.1-enterprise}
+    container_name: br-loader
+    profiles: ["manual"]
+    depends_on:
+      neo4j:
+        condition: service_healthy
+    volumes:
+      # A directory mount OUTSIDE the server's import path: a read-only mount
+      # inside it makes the image entrypoint's chown fail and crash-loops.
+      - ./graph:/graph:ro
+    entrypoint:
+      - /bin/sh
+      - -c
+      - >
+        cypher-shell -a neo4j://neo4j:7687
+        -u ${NEO4J_USERNAME:-neo4j} -p "$${NEO4J_PASSWORD}"
+        -d ${NEO4J_DATABASE:-blastradius}
+        --format plain -f /graph/load.cypher
+    environment:
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD}
+    restart: "no"
+
+  # ---------------------------------------------------------------------------
+  # Neo4j Enterprise Studio: Query, Explore (Bloom) and Dashboards.
+  # ---------------------------------------------------------------------------
+
+  # One-shot provisioner: asset-store database, Studio service account, and the
+  # schema-inspection grants readers need. Studio will not start without these.
+  nes-init:
+    image: ${NEO4J_IMAGE:-neo4j:2026.08.1-enterprise}
+    container_name: br-nes-init
+    depends_on:
+      neo4j:
+        condition: service_healthy
+    volumes:
+      - ./neo4j:/cypher:ro
+    environment:
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD}
+    entrypoint:
+      - /bin/sh
+      - -c
+      - >
+        cypher-shell -a neo4j://neo4j:7687
+        -u ${NEO4J_USERNAME:-neo4j} -p "$${NEO4J_PASSWORD}"
+        -d system
+        -P "toolsPassword => '${NES_SERVICE_PASSWORD:?set NES_SERVICE_PASSWORD in .env}'"
+        -f /cypher/nes-setup.cypher
+    restart: "no"
+
+  nes:
+    image: neo4j/enterprise-studio:latest
+    container_name: br-nes
+    depends_on:
+      nes-init:
+        condition: service_completed_successfully
+    # Studio exits if it loses its asset store, which happens whenever Neo4j
+    # restarts under it. Without a restart policy the first you know is a blank
+    # page mid-demo.
+    restart: unless-stopped
+    ports:
+      - "${NES_PORT:-8083}:8080"
+    volumes:
+      - ${NES_LICENSE_PATH:-./nes.license}:/licenses/nes.license:ro
+    environment:
+      NES_license_path: "/licenses/nes.license"
+      NES_server_port: "8080"
+      # Where Studio persists dashboards, saved queries and Perspectives.
+      # Must match neo4j/nes-setup.cypher.
+      NES_assetStore_default_uri: "neo4j://neo4j:7687"
+      NES_assetStore_default_database: "tools-storage"
+      NES_assetStore_default_authentication_basic_username: "tools_service"
+      NES_assetStore_default_authentication_basic_password: ${NES_SERVICE_PASSWORD}
+      # The deployment users query. Proxy mode over HTTP, so browsers never
+      # reach the database directly.
+      NES_neo4jDeployments_blastradius_name: "Blast Radius"
+      NES_neo4jDeployments_blastradius_uri: "http://neo4j:7474"
+    healthcheck:
+      # The Studio image ships no curl or wget. Check the listener on 8080
+      # (hex 1F90) via /proc instead.
+      test: ["CMD-SHELL", "grep -q ':1F90 ' /proc/net/tcp6 /proc/net/tcp 2>/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+volumes:
+  # Explicitly named. Neo4j silently ignores NEO4J_AUTH when it finds an
+  # already-initialised auth store, which shows up as an endlessly unhealthy
+  # container authenticating against a password nobody remembers.
+  neo4j-data:
+    name: blast-radius-neo4j-data
+  neo4j-logs:
+    name: blast-radius-neo4j-logs
+  neo4j-plugins:
+    name: blast-radius-neo4j-plugins

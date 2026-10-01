@@ -1,0 +1,25 @@
++-----------------------------------------------------------------------------------------------------------------------------------------+
+| alert       | at      | component              | team                    | alerting_dependents | alerting_dependencies | role           |
++-----------------------------------------------------------------------------------------------------------------------------------------+
+| "ALR-77120" | "03:07" | "profile-cache"        | "Data Platform"         | 9                   | 0                     | "likely cause" |
+| "ALR-77121" | "03:08" | "customer-profile-svc" | "Data Platform"         | 8                   | 1                     | "symptom"      |
+| "ALR-77123" | "03:09" | "entitlements-svc"     | "Identity & Access"     | 4                   | 2                     | "symptom"      |
+| "ALR-77124" | "03:09" | "auth-gateway"         | "Identity & Access"     | 1                   | 3                     | "symptom"      |
+| "ALR-77127" | "03:11" | "sanctions-screening"  | "Payments Platform"     | 1                   | 2                     | "symptom"      |
+| "ALR-77122" | "03:08" | "image-store"          | "Digital Channels"      | 0                   | 0                     | "unrelated"    |
+| "ALR-77125" | "03:10" | "wire-svc"             | "Payments Platform"     | 0                   | 4                     | "symptom"      |
+| "ALR-77126" | "03:10" | "wire-svc"             | "Payments Platform"     | 0                   | 4                     | "symptom"      |
+| "ALR-77128" | "03:11" | "logs-index"           | "Observability"         | 0                   | 0                     | "unrelated"    |
+| "ALR-77129" | "03:11" | "settlement-db"        | "Merchant Services"     | 0                   | 0                     | "unrelated"    |
+| "ALR-77130" | "03:12" | "bill-pay-svc"         | "Payments Platform"     | 0                   | 3                     | "symptom"      |
+| "ALR-77131" | "03:12" | "email-gateway"        | "Messaging Platform"    | 0                   | 0                     | "unrelated"    |
+| "ALR-77132" | "03:12" | "campaign-svc"         | "Marketing Tech"        | 0                   | 2                     | "symptom"      |
+| "ALR-77133" | "03:13" | "mobile-bff"           | "Digital Channels"      | 0                   | 4                     | "symptom"      |
+| "ALR-77134" | "03:13" | "atm-journal-db"       | "Branch & ATM Tech"     | 0                   | 0                     | "unrelated"    |
+| "ALR-77135" | "03:13" | "trade-finance-svc"    | "Corporate Banking"     | 0                   | 0                     | "unrelated"    |
+| "ALR-77136" | "03:14" | "agent-desktop-svc"    | "Customer Support Tech" | 0                   | 2                     | "symptom"      |
+| "ALR-77137" | "03:14" | "push-gateway"         | "Messaging Platform"    | 0                   | 0                     | "unrelated"    |
+| "ALR-77138" | "03:14" | "metrics-tsdb"         | "Observability"         | 0                   | 0                     | "unrelated"    |
++-----------------------------------------------------------------------------------------------------------------------------------------+
+
+19 rows

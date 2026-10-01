@@ -1,0 +1,14 @@
++---------------------------------------------------------------------------+
+| component              | kind        | declared_tier | pagerank | cluster |
++---------------------------------------------------------------------------+
+| "customer-profile-svc" | "Service"   | 1             | 2.4023   | 1       |
+| "ledger-svc"           | "Service"   | 1             | 1.7644   | 2       |
+| "ledger-db"            | "Datastore" | 1             | 1.6497   | 2       |
+| "profile-db"           | "Datastore" | 1             | 1.4285   | 7       |
+| "entitlements-svc"     | "Service"   | 1             | 1.4046   | 1       |
+| "profile-cache"        | "Datastore" | 3             | 1.171    | 1       |
+| "reference-data-svc"   | "Service"   | 2             | 1.0193   | 4       |
+| "reference-data-db"    | "Datastore" | 2             | 1.0164   | 4       |
++---------------------------------------------------------------------------+
+
+8 rows

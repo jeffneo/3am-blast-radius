@@ -1,0 +1,9 @@
++-----------------------------------------------------------------------------------------------------------------------------------------------------------+
+| impact              | services | most_critical_examples                                                                                                   |
++-----------------------------------------------------------------------------------------------------------------------------------------------------------+
+| "fails (confirmed)" | 14       | ["customer-profile-svc", "rtp-svc", "sanctions-screening", "wire-svc", "loan-origination-svc", "payee-verification-svc"] |
+| "fails (assumed)"   | 34       | ["auth-gateway", "entitlements-svc", "mobile-bff", "p2p-transfer-svc", "web-bff", "ach-origination-svc"]                 |
+| "degrades only"     | 28       | ["acquiring-gateway", "aml-screening-svc", "atm-switch", "card-auth-svc", "fraud-scoring-svc", "kyc-svc"]                |
++-----------------------------------------------------------------------------------------------------------------------------------------------------------+
+
+3 rows

@@ -1,0 +1,17 @@
++-----------------------+
+| label         | nodes |
++-----------------------+
+| "Change"      | 455   |
+| "Component"   | 232   |
+| "Incident"    | 228   |
+| "Service"     | 175   |
+| "Runbook"     | 71    |
+| "Datastore"   | 57    |
+| "Certificate" | 34    |
+| "Journey"     | 30    |
+| "Team"        | 25    |
+| "Alert"       | 19    |
+| "Checkin"     | 1     |
++-----------------------+
+
+11 rows

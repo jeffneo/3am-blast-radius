@@ -1,0 +1,12 @@
++---------------------------------------------------------------------------------------------------------------------+
+| unclassified_dependency                         | seen_via   | first_seen   | services_at_stake | journeys_at_stake |
++---------------------------------------------------------------------------------------------------------------------+
+| "entitlements-svc -> customer-profile-svc"      | "observed" | "2025-06-03" | 33                | 26                |
+| "legacy-profile-lookup -> customer-profile-svc" | "observed" | "2024-11-02" | 8                 | 5                 |
+| "payee-directory-svc -> legacy-profile-lookup"  | "observed" | "2023-08-31" | 4                 | 4                 |
+| "sanctions-screening -> legacy-profile-lookup"  | "observed" | "2024-08-16" | 3                 | 1                 |
+| "agent-desktop-svc -> customer-profile-svc"     | "observed" | "2023-11-10" | 2                 | 1                 |
+| "preference-sync-svc -> customer-profile-svc"   | "observed" | "2023-09-21" | 1                 | 0                 |
++---------------------------------------------------------------------------------------------------------------------+
+
+6 rows

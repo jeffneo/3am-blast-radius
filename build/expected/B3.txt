@@ -1,0 +1,36 @@
++----------------------------------------------------------------------------------------+
+| journey                     | status             | per_hour_at_0300 | per_hour_at_0700 |
++----------------------------------------------------------------------------------------+
+| "Update contact details"    | "DOWN (confirmed)" | 425              | 4250             |
+| "Visit a branch teller"     | "DOWN (confirmed)" | 0                | 660              |
+| "Send a wire"               | "DOWN (confirmed)" | 45               | 1350             |
+| "Apply for a mortgage"      | "DOWN (confirmed)" | 3                | 120              |
+| "Log in"                    | "DOWN (assumed)"   | 12000            | 120000           |
+| "Check a balance"           | "DOWN (assumed)"   | 8000             | 80000            |
+| "Pay a credit card"         | "DOWN (assumed)"   | 2650             | 26500            |
+| "Transfer money"            | "DOWN (assumed)"   | 2100             | 21000            |
+| "Pay a bill"                | "DOWN (assumed)"   | 1240             | 13950            |
+| "Deposit a check"           | "DOWN (assumed)"   | 660              | 8800             |
+| "Chat with support"         | "DOWN (assumed)"   | 1260             | 8400             |
+| "Make a loan payment"       | "DOWN (assumed)"   | 850              | 8500             |
+| "Add a payee"               | "DOWN (assumed)"   | 600              | 6000             |
+| "Download a statement"      | "DOWN (assumed)"   | 475              | 4750             |
+| "Set up autopay"            | "DOWN (assumed)"   | 450              | 4500             |
+| "Freeze a card"             | "DOWN (assumed)"   | 600              | 2400             |
+| "Open an account"           | "DOWN (assumed)"   | 104              | 1560             |
+| "Redeem rewards"            | "DOWN (assumed)"   | 220              | 2200             |
+| "Place a trade"             | "DOWN (assumed)"   | 38               | 380              |
+| "Set a travel notice"       | "DOWN (assumed)"   | 62               | 620              |
+| "Dispute a charge"          | "DOWN (assumed)"   | 140              | 1400             |
+| "Message my advisor"        | "DOWN (assumed)"   | 23               | 460              |
+| "View merchant settlements" | "DOWN (assumed)"   | 21               | 630              |
+| "Get an FX quote"           | "DOWN (assumed)"   | 51               | 510              |
+| "Run payroll"               | "DOWN (assumed)"   | 14               | 420              |
+| "Approve positive pay"      | "DOWN (assumed)"   | 9                | 360              |
+| "Tap to pay"                | "up"               | 22800            | 76000            |
+| "Withdraw cash at an ATM"   | "up"               | 11700            | 35100            |
+| "Find a branch or ATM"      | "up"               | 1040             | 7800             |
+| "Reset a password"          | "up"               | 1120             | 7000             |
++----------------------------------------------------------------------------------------+
+
+30 rows

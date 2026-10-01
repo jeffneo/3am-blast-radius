@@ -1,0 +1,10 @@
++--------------------------------------------------------------------------------------------------------------------------------------+
+| hops | services | most_critical_examples                                                                                             |
++--------------------------------------------------------------------------------------------------------------------------------------+
+| 1    | 1        | ["customer-profile-svc"]                                                                                           |
+| 2    | 12       | ["entitlements-svc", "sanctions-screening", "agent-desktop-svc", "loan-origination-svc", "payee-verification-svc"] |
+| 3    | 27       | ["auth-gateway", "p2p-transfer-svc", "rtp-svc", "wire-svc", "ach-origination-svc"]                                 |
+| 4    | 8        | ["mobile-bff", "web-bff", "auth-proxy", "open-account-svc", "order-routing-svc"]                                   |
++--------------------------------------------------------------------------------------------------------------------------------------+
+
+4 rows
