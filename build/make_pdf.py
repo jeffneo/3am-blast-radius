@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import html
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -26,6 +27,7 @@ from pathlib import Path
 import markdown
 
 ROOT = Path(__file__).resolve().parents[1]
+FONT = ROOT / "build/fonts/LabMono-Regular.ttf"
 CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 
 DETAILS_RE = re.compile(r"<details>\s*<summary>(.*?)</summary>\s*(.*?)</details>", re.S)
@@ -39,9 +41,9 @@ DOCS = [
          title="3 a.m. Blast Radius: Lab Guide", footer="3 a.m. Blast Radius · lab guide",
          h2_pages=("Part 2:", "Part 3:", "Part 4:", "Part 5:", "Stretch challenges", "Answers"),
          h3_page="The readiness check",
-         note=('<b>Printed copy.</b> To copy a query, use <code>LAB-GUIDE.md</code> '
-               'or the files in <code>queries/</code> from the repository or zip. Text copied out of a PDF '
-               'can lose its line breaks, and Cypher needs them.')),
+         note=('<b>Printed copy.</b> Queries copy out of this PDF correctly in macOS Preview and in Chrome. '
+               'If a pasted query ever fails, copy it from <code>LAB-GUIDE.md</code> or the files in '
+               '<code>queries/</code> in the repository or zip instead.')),
     dict(src="FACILITATOR-GUIDE.md", pdf="FACILITATOR-GUIDE.pdf", html="facilitator-guide.html",
          title="3 a.m. Blast Radius: Facilitator Guide", footer="3 a.m. Blast Radius · facilitator guide · SPOILERS",
          h2_pages=("3. What must", "4. Run of show", "6. The floor", "8. Questions", "Appendix A"),
@@ -51,6 +53,9 @@ DOCS = [
 ]
 
 CSS = """
+/* Lab Mono: Source Code Pro with a raised underscore, so queries copy out of the PDF intact on macOS.
+   See build/fonts/make_labmono.py. */
+@font-face { font-family: "Lab Mono"; src: url("__FONT__"); }
 @page {
   size: Letter;
   margin: 0.6in 0.65in 0.7in;
@@ -69,15 +74,15 @@ p, li { orphans: 3; widows: 3; }
 p:has(+ pre), p:has(+ table), p:has(+ ol), p:has(+ ul) { break-after: avoid; }
 a { color: #0b5cad; text-decoration: none; }
 hr { display: none; }
-code { font: 8.8pt Menlo, "SF Mono", monospace; background: #f2f4f7; padding: 0 2pt; border-radius: 2pt; }
-pre { font: 8pt/1.35 Menlo, "SF Mono", monospace; background: #f5f7fa; border: 0.6pt solid #d9dee5;
+code { font: 8.8pt "Lab Mono", Menlo, monospace; background: #f2f4f7; padding: 0 2pt; border-radius: 2pt; }
+pre { font: 8pt/1.35 "Lab Mono", Menlo, monospace; background: #f5f7fa; border: 0.6pt solid #d9dee5;
       border-left: 3pt solid #7a1f1f; border-radius: 3pt; padding: 6pt 8pt; white-space: pre-wrap;
       break-inside: avoid; margin: 6pt 0; }
 pre code { background: none; padding: 0; font: inherit; }
 table { border-collapse: collapse; width: 100%; margin: 6pt 0 8pt; font-size: 9pt; break-inside: avoid; }
 th, td { border: 0.6pt solid #d0d6de; padding: 3pt 5pt; text-align: left; vertical-align: top; }
 th { background: #f6ecec; font-weight: 600; }
-table.result { font: 7.4pt/1.3 Menlo, "SF Mono", monospace; border-left: 3pt solid #2e8b57; }
+table.result { font: 7.4pt/1.3 "Lab Mono", Menlo, monospace; border-left: 3pt solid #2e8b57; }
 table.result th { background: #eaf5ee; }
 p.rows { font-size: 8pt; color: #666; margin: -4pt 0 8pt; }
 blockquote { margin: 8pt 0; padding: 5pt 9pt; background: #fff8e6; border-left: 3pt solid #e0a800; }
@@ -120,6 +125,31 @@ def blank_line_before_lists(text: str) -> str:
     return "\n".join(out) + "\n"
 
 
+def copy_test(md: str, pdf: Path) -> None:
+    """Every Cypher block must come out of the PDF intact when copied on macOS.
+
+    Apple's PDFKit (Preview, Safari, Quick Look) pasted each underscore of
+    `FIRED_ON` onto a line of its own, which Neo4j Browser rejects. It is what an
+    attendee on a Mac would use, so test with it, comparing with all whitespace
+    removed (indentation and line breaks legitimately change). Needs `swift`."""
+    if not shutil.which("swift"):
+        print("  copy test skipped: needs macOS (swift)")
+        return
+    r = subprocess.run(["swift", str(ROOT / "build/pdf_text.swift"), str(pdf)], capture_output=True, text=True)
+    if r.returncode:
+        sys.exit(f"copy test could not read {pdf.name}:\n{r.stderr}")
+    squash = lambda s: re.sub(r"\s+", "", s)
+    pasted = squash(r.stdout)
+    blocks = re.findall(r"```cypher\n(.*?)\n```", md, re.S)
+    # Count occurrences: H1, H3, H5 and H7 are the same statement, and an intact
+    # copy of one must not vouch for a broken copy of another.
+    need = {squash(b): sum(squash(x) == squash(b) for x in blocks) for b in blocks}
+    bad = [b for b in blocks if pasted.count(squash(b)) < need[squash(b)]]
+    if bad:
+        sys.exit(f"copy test FAILED for {len(bad)} of {len(blocks)} queries in {pdf.name}; first:\n{bad[0]}")
+    print(f"  copy test: all {len(blocks)} queries paste back intact")
+
+
 def render(doc: dict) -> None:
     src, html_out, pdf_out = ROOT / doc["src"], ROOT / "build/.work" / doc["html"], ROOT / doc["pdf"]
     text = re.sub(r"<!-- GENERATED.*?-->\s*", "", src.read_text(), flags=re.S)
@@ -155,7 +185,7 @@ def render(doc: dict) -> None:
     body = body[:first_h2] + note + body[first_h2:]
 
     page = ("<!doctype html><html lang='en'><head><meta charset='utf-8'>"
-            f"<title>{doc['title']}</title><style>{CSS.replace('__FOOTER__', doc['footer'])}</style></head>"
+            f"<title>{doc['title']}</title><style>{CSS.replace('__FOOTER__', doc['footer']).replace('__FONT__', FONT.as_uri())}</style></head>"
             f"<body>{body}</body></html>")
     html_out.parent.mkdir(parents=True, exist_ok=True)
     html_out.write_text(page)
@@ -166,6 +196,7 @@ def render(doc: dict) -> None:
         sys.exit(f"Chrome failed:\n{r.stderr}")
     print(f"wrote {pdf_out.relative_to(ROOT)} ({pdf_out.stat().st_size / 1e3:.0f} kB"
           + (f", {len(answers)} answers moved to the appendix)" if answers else ")"))
+    copy_test(src.read_text(), pdf_out)
 
 
 def main() -> None:

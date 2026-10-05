@@ -3,13 +3,17 @@
     python3 build/verify.py            # compare every query to build/expected/
     python3 build/verify.py --record   # (re)write build/expected/ after a deliberate change
     python3 build/verify.py --image neo4j:2026.08.1-enterprise   # same checks on the dev server version
+    python3 build/verify.py --no-gds   # a plain server: skips the GDS statements (the core lab must not need them)
 
 Starts a throwaway container (removed afterwards, with its volume; never touches
 the compose stack) laid out like the JPMC sandbox: an attendee database
 (lab-user01) and a NON-ADMIN user whose home database it is, who runs every
 query without naming a database. Loads graph/load.cypher TWICE (the second load must change nothing: idempotency),
-runs each statement in queries/demo-queries.cypher and then queries/hands-on.cypher
-(which writes, and must restore the graph), and checks:
+runs each statement in queries/demo-queries.cypher, the live GDS statements (queries/gds.cypher:
+the plugin ships in the enterprise image and is switched on, unlicensed), the Bloom search
+phrases (queries/bloom.cypher: each must return paths; the size of its picture is recorded)
+and then queries/hands-on.cypher (which writes, and must restore the graph; live PageRank and
+the blast-radius picture are re-run after the edit), and checks:
 
   * it succeeds and matches the recorded result
   * lab rules: no $params, every variable-length path bounded, no APOC
@@ -38,7 +42,8 @@ BANNER = re.compile(r"Thank you for installing Neo4j.*?if you require more time\
 # property" on 2026.x). Their wording differs by server version and carries no result.
 SUMMARY = re.compile(r"^(added|set|removed|deleted|created)\b.*\d.*$", re.I | re.M)
 TIMING = re.compile(r"ready to start consuming query after (\d+) ms, results consumed after another (\d+) ms")
-ID_RE = re.compile(r"^//\s*((?:B\d+[a-z]?)|(?:H\d+)|(?:R\d+)|(?:K\d+))\b")
+ID_RE = re.compile(r"^//\s*((?:B\d+[a-z]?)|(?:H\d+)|(?:R\d+)|(?:K\d+)|(?:G\d+)|(?:P\d+))\b")
+PARAM_RE = re.compile(r"^//\s+param:\s+(\w+) = (.+?)\s*$")
 
 
 def sh(*a: str, input: str | None = None) -> subprocess.CompletedProcess:
@@ -76,11 +81,44 @@ def statements(path: Path):
             buf = []
 
 
-def lint(stmt: str) -> list[str]:
+def phrase_params(path: Path) -> dict[str, list[tuple[str, str]]]:
+    """The `param: name = value` defaults written above each Bloom phrase."""
+    out: dict[str, list[tuple[str, str]]] = {}
+    cur = None
+    for line in path.read_text().splitlines():
+        m = ID_RE.match(line.strip())
+        if m:
+            cur = m.group(1)
+            out[cur] = []
+        elif cur and (pm := PARAM_RE.match(line.strip())):
+            out[cur].append((pm.group(1), pm.group(2)))
+    return out
+
+
+def phrase_wrapper(stmt: str, params: list[tuple[str, str]]) -> str:
+    """Run a Bloom phrase (which returns paths in a column `p`) and report the size of
+    the picture it would draw: paths, distinct nodes, distinct relationships."""
+    pre = "".join(f":param {k} => '{v}'\n" for k, v in params)
+    return pre + f"""CALL {{
+{stmt.rstrip().rstrip(';')}
+}}
+WITH collect(p) AS ps
+RETURN size(ps) AS paths,
+       size(reduce(a = [], x IN ps | a + [n IN nodes(x) WHERE NOT n IN a])) AS nodes,
+       size(reduce(a = [], x IN ps | a + [r IN relationships(x) WHERE NOT r IN a])) AS relationships;"""
+
+
+def lint(stmt: str, kind: str = "lab") -> list[str]:
+    """kind: 'lab' (the core: no $params, no GDS), 'gds' (live GDS, no $params) or
+    'bloom' (search phrases: $params are the point, and each must return paths as p)."""
     body = re.sub(r"'[^']*'", "''", stmt)
     out = []
-    if "$" in body:
+    if "$" in body and kind != "bloom":
         out.append("uses a $param")
+    if kind == "lab" and "gds." in body:
+        out.append("uses GDS (the core lab must work without it)")
+    if kind == "bloom" and not re.search(r"\bRETURN p;$", body.strip()):
+        out.append("a Bloom phrase must end with RETURN p;")
     for rel in re.findall(r"\[[^\]]*\*[^\]]*\]", body):
         if not re.search(r"\*\d*\.\.\d+", rel):
             out.append(f"unbounded path {rel}")
@@ -95,12 +133,20 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--record", action="store_true")
     ap.add_argument("--image", default=IMAGE, help="Neo4j image to test on (default: the 5.26 lab target)")
+    ap.add_argument("--no-gds", action="store_true", help="plain server without the GDS plugin: skips the GDS statements")
     args = ap.parse_args()
+    gds = not args.no_gds
+    if args.record and not gds:
+        sys.exit("--record needs GDS (the recorded results include the GDS statements)")
 
     sh("docker", "rm", "-fv", NAME)
+    # GDS ships inside the enterprise image; the plugin is switched on, unlicensed (the
+    # conservative case: we do not know which edition the sandbox has).
+    plugin = (["-e", 'NEO4J_PLUGINS=["graph-data-science"]', "-e", "NEO4J_dbms_security_procedures_unrestricted=gds.*",
+               "-e", "NEO4J_dbms_security_procedures_allowlist=gds.*"] if gds else [])
     sh("docker", "run", "-d", "--name", NAME, "-e", f"NEO4J_AUTH=neo4j/{PW}",
        "-e", "NEO4J_ACCEPT_LICENSE_AGREEMENT=eval", "-e", "NEO4J_server_memory_heap_max__size=512m",
-       "-e", "NEO4J_server_memory_pagecache_size=128m", args.image)
+       "-e", "NEO4J_server_memory_pagecache_size=128m", *plugin, args.image)
     failures, rows = 0, []
     try:
         for _ in range(60):
@@ -146,11 +192,14 @@ GRANT ROLE {USER}_owner TO {USER};
             (EXPECTED / "LOAD.txt").write_text(load_txt)
         results: dict[str, str] = {}
 
-        def check(sid: str, stmt: str, compare_as: str | None = None) -> None:
-            """Run one statement and compare it to its recorded result."""
+        def check(sid: str, stmt: str, compare_as: str | None = None, kind: str = "lab",
+                  compare: bool = True, send: str | None = None) -> None:
+            """Run one statement and compare it to its recorded result. `send` is what is
+            actually run when that differs from the statement linted (Bloom phrases are
+            wrapped to measure them). compare=False checks only that it runs."""
             nonlocal failures
-            problems = lint(stmt)
-            r = as_attendee(stmt)
+            problems = lint(stmt, kind)
+            r = as_attendee(send or stmt)
             m = TIMING.search(r.stdout)
             ms = int(m[1]) + int(m[2]) if m else None
             result = re.sub(r"\n{3,}", "\n\n", SUMMARY.sub("", BANNER.sub("", TIMING.sub("", r.stdout)))).strip() + "\n"
@@ -160,6 +209,8 @@ GRANT ROLE {USER}_owner TO {USER};
             if r.returncode:
                 status = "ERROR"
                 problems.append(r.stderr.strip().splitlines()[0])
+            elif not compare:
+                pass
             elif args.record and compare_as is None:
                 exp.write_text(result)
             elif not exp.exists():
@@ -182,8 +233,27 @@ GRANT ROLE {USER}_owner TO {USER};
             check(sid, stmt)
         for sid, stmt in statements(ROOT / "queries/demo-queries.cypher"):
             check(sid, stmt)
+        # Live GDS (read-only: stream mode). Run as the attendee on the unlicensed plugin.
+        gds_stmts = dict(statements(ROOT / "queries/gds.cypher")) if gds else {}
+        for sid, stmt in gds_stmts.items():
+            check(sid, stmt, kind="gds", compare=sid != "G0")     # G0 prints the plugin version: it differs by server
+        if gds and args.record:
+            ver = re.search(r'"([\d.]+)"', results["G0"])
+            (EXPECTED / "GDS.txt").write_text(f"gds_version={ver.group(1) if ver else 'unknown'}\n")
+        # Bloom search phrases: each must run, return paths, and keep the picture a readable size.
+        bloom = ROOT / "queries/bloom.cypher"
+        defaults = phrase_params(bloom)
+        for sid, stmt in statements(bloom):
+            check(sid, stmt, kind="bloom", send=phrase_wrapper(stmt, defaults[sid]))
         for sid, stmt in statements(ROOT / "queries/hands-on.cypher"):
             check(sid, stmt)
+            if gds and sid in ("H2", "H4"):     # the algorithm must move with the decision
+                check("G1s" if sid == "H2" else "G1h", gds_stmts["G1"], kind="gds")
+            if sid == "H2":                     # ... and so must the Bloom picture
+                p1 = dict(statements(bloom))["P1"]
+                check("P1s", p1, kind="bloom", send=phrase_wrapper(p1, defaults["P1"]))
+        if gds:                                  # restored: live PageRank must be back where it started
+            check("G1^", gds_stmts["G1"], compare_as="G1", kind="gds")
         b2d = dict(statements(ROOT / "queries/demo-queries.cypher"))["B2d"]
         check("B2d*", b2d, compare_as="B2d")
         # The facilitator's last resort is to re-run the loader against one

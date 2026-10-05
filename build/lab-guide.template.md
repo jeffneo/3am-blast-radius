@@ -259,7 +259,7 @@ Suppose `entitlements-svc` survives a slow profile service. This marks the link 
 
 {{result H3}}
 
-**What to notice:** the worst case falls to **{{f journeys_if_soft}} journeys**. Tonight looks exactly like the day before `{{f link_change}}`.
+**What to notice:** the worst case falls to **{{f journeys_if_soft}} journeys**. Tonight looks exactly like the day before `{{f link_change}}`. *(Curious what a graph algorithm makes of that change? That's stretch challenge S12, if your database has Graph Data Science.)*
 
 ### Step 12: Now decide it's HARD
 
@@ -335,7 +335,7 @@ You have, at 03:55:
 
 ## Stretch challenges (if you finish early)
 
-Try each one first; the query and result are under each. **Keep variable-length paths short** (`*1..8` or less): everyone's database lives on the same server.
+Try each one first; the query and result are under each. **Keep variable-length paths short** (`*1..8` or less): everyone's database lives on the same server. **S12 and S13 need the Graph Data Science (GDS) plugin**, which not every database has; each tells you what to do if yours doesn't.
 
 ### S1: Which journeys are down?
 Every journey, with its status: proven down, assumed down, or up.
@@ -474,6 +474,42 @@ Take a closer look at the label no one mentioned. Which of them is about to expi
 *A different kind of hidden shared dependency, and an eight-day fuse instead of a 3 a.m. page.*
 </details>
 
+### S12: Run the algorithm yourself, then change the answer
+**Needs the Graph Data Science (GDS) plugin.** If your database doesn't have it, this stops with an error such as *There is no procedure with the name `gds.graph.drop` registered*. Nothing was changed; skip S12 and S13. (If the error says you are *not allowed* to run it, tell a helper.)
+
+S10 read a score that was worked out in advance. This runs **PageRank now**, over the hard dependencies as they are at this moment: it builds a temporary in-memory copy of them, runs the algorithm, and removes the copy. It writes nothing to your database. It shows the top five, plus the three components the story is about.
+
+<details><summary>Query and result</summary>
+
+{{query G1}}
+
+{{result G1}}
+
+`live_pagerank` and `precomputed` agree: the stored property is the same calculation, done earlier. `profile-cache`, declared tier {{f cache_tier}}, ranks **{{f pr_live_cache_rank}}**.
+
+**Now change the graph and run it again.** Run **Step 10** (mark the link soft), then run this query once more:
+
+{{result G1s}}
+
+`customer-profile-svc` falls from rank 1 to **{{f pr_soft_profile_rank}}** (score {{f pr_live_profile_score}} to {{f pr_soft_profile_score}}) and `profile-cache` from rank {{f pr_live_cache_rank}} to **{{f pr_soft_cache_rank}}** ({{f pr_live_cache_score}} to {{f pr_soft_cache_score}}). The **`precomputed` column has not moved**: a stored score is a snapshot of the graph as it was when it was calculated. If you mark the link **hard** (Step 12) instead, nothing changes, because the worst case already assumed it was hard.
+
+**Put it back with Step 14** when you are done.
+</details>
+
+### S13: Does the org chart match the dependency map?
+**Needs GDS**, like S12. *Louvain* finds groups of components that depend on each other more than on the rest of the estate, ignoring direction. For each group this shows how many **teams** own its members, which team owns the most, and how many belong to the team that owns the cache.
+
+<details><summary>Query and result</summary>
+
+{{query G2}}
+
+{{result G2}}
+
+The group that holds `profile-cache` has **{{f comm_cache_components}} components owned by {{f comm_cache_teams}} teams**. {{f comm_cache_biggest}} owns the most of them ({{f comm_cache_biggest_owns}}); {{f cause_owner}}, which owns the cache, owns **{{f comm_cache_owner_owns}}**. It is the finding from S7 seen from another side: the things that fail together are not inside one team, so a ticket for one of them lands in the wrong place.
+
+*The group sizes are repeatable here, but Louvain is a heuristic: a different version of GDS can split the smaller groups slightly differently. The group numbers in S10's `cluster` column were computed on another version for that reason.*
+</details>
+
 ---
 
 ## If something goes wrong
@@ -509,3 +545,5 @@ Take a closer look at the label no one mentioned. Which of them is about to expi
 | **p99** | The latency that 99% of requests beat. A measure of the slow tail |
 | **Runbook** | Written steps for handling a known failure |
 | **Root cause** | The component that actually failed, as opposed to those that merely showed symptoms |
+| **PageRank** | A score for how much of a graph leans on each node, counting indirect reliance. Here, how much of the estate depends on a component, directly or through others |
+| **Community** | A group of nodes more connected to each other than to the rest, found by an algorithm (Louvain). Here, components that depend on each other |

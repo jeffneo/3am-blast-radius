@@ -548,7 +548,7 @@ RETURN sum(CASE WHEN worst THEN 1 ELSE 0 END) AS journeys_down_worst_case,
 1 row
 ```
 
-**What to notice:** the worst case falls to **9 journeys**. Tonight looks exactly like the day before `CHG-1873`.
+**What to notice:** the worst case falls to **9 journeys**. Tonight looks exactly like the day before `CHG-1873`. *(Curious what a graph algorithm makes of that change? That's stretch challenge S12, if your database has Graph Data Science.)*
 
 ### Step 12: Now decide it's HARD
 
@@ -728,7 +728,7 @@ You have, at 03:55:
 
 ## Stretch challenges (if you finish early)
 
-Try each one first; the query and result are under each. **Keep variable-length paths short** (`*1..8` or less): everyone's database lives on the same server.
+Try each one first; the query and result are under each. **Keep variable-length paths short** (`*1..8` or less): everyone's database lives on the same server. **S12 and S13 need the Graph Data Science (GDS) plugin**, which not every database has; each tells you what to do if yours doesn't.
 
 ### S1: Which journeys are down?
 Every journey, with its status: proven down, assumed down, or up.
@@ -1226,6 +1226,134 @@ ORDER BY expires_in_days, certificate;
 *A different kind of hidden shared dependency, and an eight-day fuse instead of a 3 a.m. page.*
 </details>
 
+### S12: Run the algorithm yourself, then change the answer
+**Needs the Graph Data Science (GDS) plugin.** If your database doesn't have it, this stops with an error such as *There is no procedure with the name `gds.graph.drop` registered*. Nothing was changed; skip S12 and S13. (If the error says you are *not allowed* to run it, tell a helper.)
+
+S10 read a score that was worked out in advance. This runs **PageRank now**, over the hard dependencies as they are at this moment: it builds a temporary in-memory copy of them, runs the algorithm, and removes the copy. It writes nothing to your database. It shows the top five, plus the three components the story is about.
+
+<details><summary>Query and result</summary>
+
+```cypher
+CALL gds.graph.drop('lab_pagerank', false) YIELD graphName
+WITH count(*) AS cleared
+MATCH (s:Component)
+OPTIONAL MATCH (s)-[r:DEPENDS_ON]->(t:Component)
+WHERE r.hard
+WITH gds.graph.project('lab_pagerank', s, t) AS g
+CALL gds.pageRank.stream(g.graphName, {maxIterations: 50, dampingFactor: 0.85}) YIELD nodeId, score
+WITH gds.util.asNode(nodeId) AS c, score
+ORDER BY score DESC, c.name
+WITH collect({c: c, score: score}) AS ranked
+CALL gds.graph.drop('lab_pagerank') YIELD graphName
+UNWIND range(0, size(ranked) - 1) AS i
+WITH ranked[i].c AS c, ranked[i].score AS score, i + 1 AS rank
+WHERE rank <= 5 OR c.name IN ['profile-cache', 'entitlements-svc', 'customer-profile-svc']
+RETURN rank, c.name AS component, c.tier AS declared_tier,
+       round(score * 1000) / 1000.0 AS live_pagerank,
+       round(c.pagerank * 1000) / 1000.0 AS precomputed
+ORDER BY rank;
+```
+
+```
++-----------------------------------------------------------------------------+
+| rank | component              | declared_tier | live_pagerank | precomputed |
++-----------------------------------------------------------------------------+
+| 1    | "customer-profile-svc" | 1             | 2.402         | 2.402       |
+| 2    | "ledger-svc"           | 1             | 1.764         | 1.764       |
+| 3    | "ledger-db"            | 1             | 1.65          | 1.65        |
+| 4    | "profile-db"           | 1             | 1.429         | 1.429       |
+| 5    | "entitlements-svc"     | 1             | 1.405         | 1.405       |
+| 6    | "profile-cache"        | 3             | 1.171         | 1.171       |
++-----------------------------------------------------------------------------+
+
+6 rows
+```
+
+`live_pagerank` and `precomputed` agree: the stored property is the same calculation, done earlier. `profile-cache`, declared tier 3, ranks **6**.
+
+**Now change the graph and run it again.** Run **Step 10** (mark the link soft), then run this query once more:
+
+```
++-----------------------------------------------------------------------------+
+| rank | component              | declared_tier | live_pagerank | precomputed |
++-----------------------------------------------------------------------------+
+| 1    | "ledger-svc"           | 1             | 1.764         | 1.764       |
+| 2    | "ledger-db"            | 1             | 1.65          | 1.65        |
+| 3    | "entitlements-svc"     | 1             | 1.405         | 1.405       |
+| 4    | "customer-profile-svc" | 1             | 1.208         | 2.402       |
+| 5    | "reference-data-svc"   | 2             | 1.019         | 1.019       |
+| 11   | "profile-cache"        | 3             | 0.664         | 1.171       |
++-----------------------------------------------------------------------------+
+
+6 rows
+```
+
+`customer-profile-svc` falls from rank 1 to **4** (score 2.402 to 1.208) and `profile-cache` from rank 6 to **11** (1.171 to 0.664). The **`precomputed` column has not moved**: a stored score is a snapshot of the graph as it was when it was calculated. If you mark the link **hard** (Step 12) instead, nothing changes, because the worst case already assumed it was hard.
+
+**Put it back with Step 14** when you are done.
+</details>
+
+### S13: Does the org chart match the dependency map?
+**Needs GDS**, like S12. *Louvain* finds groups of components that depend on each other more than on the rest of the estate, ignoring direction. For each group this shows how many **teams** own its members, which team owns the most, and how many belong to the team that owns the cache.
+
+<details><summary>Query and result</summary>
+
+```cypher
+CALL gds.graph.drop('lab_communities', false) YIELD graphName
+WITH count(*) AS cleared
+MATCH (s:Component)
+OPTIONAL MATCH (s)-[r:DEPENDS_ON]->(t:Component)
+WHERE r.hard
+WITH gds.graph.project('lab_communities', s, t, {}, {undirectedRelationshipTypes: ['*']}) AS g
+CALL gds.louvain.stream(g.graphName, {concurrency: 1}) YIELD nodeId, communityId
+WITH communityId, collect(gds.util.asNode(nodeId)) AS members
+WITH collect(members) AS communities
+CALL gds.graph.drop('lab_communities') YIELD graphName
+WITH communities, head([(t:Team)-[:OWNS]->(:Datastore {name: 'profile-cache'}) | t.name]) AS cache_owner
+UNWIND communities AS members
+WITH members, cache_owner,
+     any(m IN members WHERE m.name = 'profile-cache') AS has_cache,
+     [m IN members | head([(t:Team)-[:OWNS]->(m) | t.name])] AS owners
+CALL {
+  WITH owners
+  UNWIND [o IN owners WHERE o IS NOT NULL] AS o
+  WITH o, count(*) AS n
+  ORDER BY n DESC, o
+  RETURN count(*) AS teams, head(collect(o)) AS biggest_owner, head(collect(n)) AS biggest_owner_owns
+}
+WITH members, has_cache, teams, biggest_owner, biggest_owner_owns,
+     size([o IN owners WHERE o = cache_owner]) AS owned_by_cache_owner
+WHERE size(members) >= 5 OR has_cache
+RETURN size(members) AS components, teams, biggest_owner, biggest_owner_owns,
+       owned_by_cache_owner, has_cache AS has_profile_cache
+ORDER BY components DESC, biggest_owner;
+```
+
+```
++-----------------------------------------------------------------------------------------------------------+
+| components | teams | biggest_owner        | biggest_owner_owns | owned_by_cache_owner | has_profile_cache |
++-----------------------------------------------------------------------------------------------------------+
+| 36         | 9     | "Payments Platform"  | 15                 | 2                    | TRUE              |
+| 32         | 8     | "Core Banking"       | 14                 | 0                    | FALSE             |
+| 22         | 8     | "Wealth"             | 9                  | 2                    | FALSE             |
+| 19         | 7     | "Fraud & Risk"       | 7                  | 1                    | FALSE             |
+| 17         | 4     | "Cards"              | 10                 | 0                    | FALSE             |
+| 17         | 4     | "Cloud Platform"     | 8                  | 0                    | FALSE             |
+| 17         | 6     | "Merchant Services"  | 5                  | 2                    | FALSE             |
+| 13         | 5     | "Lending"            | 6                  | 4                    | FALSE             |
+| 13         | 5     | "Messaging Platform" | 7                  | 0                    | FALSE             |
+| 8          | 2     | "Treasury Tech"      | 6                  | 0                    | FALSE             |
+| 6          | 3     | "Marketing Tech"     | 3                  | 2                    | FALSE             |
++-----------------------------------------------------------------------------------------------------------+
+
+11 rows
+```
+
+The group that holds `profile-cache` has **36 components owned by 9 teams**. Payments Platform owns the most of them (15); Data Platform, which owns the cache, owns **2**. It is the finding from S7 seen from another side: the things that fail together are not inside one team, so a ticket for one of them lands in the wrong place.
+
+*The group sizes are repeatable here, but Louvain is a heuristic: a different version of GDS can split the smaller groups slightly differently. The group numbers in S10's `cluster` column were computed on another version for that reason.*
+</details>
+
 ---
 
 ## If something goes wrong
@@ -1261,3 +1389,5 @@ ORDER BY expires_in_days, certificate;
 | **p99** | The latency that 99% of requests beat. A measure of the slow tail |
 | **Runbook** | Written steps for handling a known failure |
 | **Root cause** | The component that actually failed, as opposed to those that merely showed symptoms |
+| **PageRank** | A score for how much of a graph leans on each node, counting indirect reliance. Here, how much of the estate depends on a component, directly or through others |
+| **Community** | A group of nodes more connected to each other than to the rest, found by an algorithm (Louvain). Here, components that depend on each other |

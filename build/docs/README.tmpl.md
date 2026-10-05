@@ -10,6 +10,7 @@ Nothing in this folder describes a real institution. Every service, team, incide
 ├── STORYLINE.md                 the story in six scenes, the easter egg, what's planted (generated; SPOILERS)
 ├── LAB-GUIDE.pdf / .md          the attendee guide (generated). The PDF is for print and the zip
 ├── FACILITATOR-GUIDE.pdf / .md  for the people delivering it: run of show, the floor, the numbers (generated; SPOILERS)
+├── BLOOM-GUIDE.md               eight Bloom search phrases and a perspective recipe (generated; the Cypher is tested, Bloom is not)
 ├── docker-compose.yml           Neo4j (APOC + GDS Enterprise) + Enterprise Studio + a loader
 ├── Makefile                     shortcuts: make help
 ├── .env                         your configuration and credentials (secret, gitignored)
@@ -24,6 +25,8 @@ Nothing in this folder describes a real institution. Every service, team, incide
 │   ├── readiness.cypher         the two-minute readiness check attendees run beforehand
 │   ├── demo-queries.cypher      the read-only queries, B0 to B11, in story order
 │   ├── hands-on.cypher          statements that CHANGE the graph: classify the link, watch the answer move
+│   ├── gds.cypher               live Graph Data Science: PageRank and Louvain, as read-only stretch statements (G0 to G2)
+│   ├── bloom.cypher             the eight Bloom search phrases (P1 to P8), each returning paths
 │   └── facts.cypher             key figures for the documents (not part of the lab)
 └── build/
     ├── estate.py                the hand-written facts: teams, services, dependencies, the planted story, the easter egg
@@ -35,7 +38,9 @@ Nothing in this folder describes a real institution. Every service, team, incide
     ├── verify.py                loads twice as a sandbox-shaped attendee, runs every query, checks the documents
     ├── facts.py                 every figure in the documents, computed from the tested results
     ├── make_guide.py            renders the generated documents from their templates
-    ├── make_pdf.py              renders LAB-GUIDE.pdf and FACILITATOR-GUIDE.pdf (headless Chrome)
+    ├── make_pdf.py              renders LAB-GUIDE.pdf and FACILITATOR-GUIDE.pdf (headless Chrome), then tests that every query copies out intact on macOS
+    ├── pdf_text.swift           what macOS would copy out of a PDF (used by that test)
+    ├── fonts/                   Lab Mono, the PDFs' code font: Source Code Pro with a raised underscore, so queries survive copy and paste (see NOTICE.md)
     ├── lab-guide.template.md    the guide's text
     ├── docs/                    the templates for STORYLINE, FACILITATOR, README and MODEL
     └── expected/                recorded results, one file per query
@@ -67,7 +72,7 @@ Paste queries from `queries/demo-queries.cypher` into Query or Browser, in order
 
 ### What the stack is for
 
-This is the **development and demo** environment: Neo4j 2026.08, with GDS Enterprise for scoring and Studio for exploring. **The lab itself targets Neo4j 5.26 with no GDS**, which is what the JPMC sandbox runs. So GDS runs once here, and its results ship as ordinary properties in `load.cypher`. `make verify` tests everything on a clean 5.26.
+This is the **development and demo** environment: Neo4j 2026.08, with GDS Enterprise for scoring and Studio for exploring. **The lab itself targets Neo4j 5.26**, which is what the JPMC sandbox runs. GDS runs once here, and its results ship as ordinary properties in `load.cypher`, so **the core lab needs no GDS**. The sandbox is now expected to have it, so two stretch challenges (S12, S13) run GDS live; they are checked on 5.26 with the GDS {{f gds_version}} plugin, unlicensed, as a non-admin user. `make verify` tests everything on a clean 5.26.
 
 To load into any other Neo4j 5.26 or later:
 
@@ -96,7 +101,7 @@ make verify        # clean Neo4j 5.26: the lab target
 make verify-dev    # the dev server version
 ```
 
-Each starts a throwaway container (removed afterwards, with its volume) laid out like the JPMC sandbox: an attendee database and a **non-admin user** whose home database it is, who runs every query without naming a database. It loads the graph twice (the second load must change nothing), runs the readiness check, the key-figure queries, all the demo queries and the hands-on statements, compares each to `build/expected/`, and fails if any generated document is out of date. It then re-runs the loader as that attendee, after a half-finished edit and after deleting everything, and checks the graph comes back identical: that is the facilitator's reset. It also enforces the lab rules: no `$params`, every path bounded, no APOC, no `//` comments inside a statement.
+Each starts a throwaway container (removed afterwards, with its volume), with the GDS plugin switched on (`--no-gds` for a plain server), laid out like the JPMC sandbox: an attendee database and a **non-admin user** whose home database it is, who runs every query without naming a database. It loads the graph twice (the second load must change nothing), runs the readiness check, the key-figure queries, all the demo queries, the live GDS statements, the Bloom phrases (measuring the size of each picture) and the hands-on statements (re-running live PageRank and the blast-radius phrase after the edit), compares each to `build/expected/`, and fails if any generated document is out of date. It then re-runs the loader as that attendee, after a half-finished edit and after deleting everything, and checks the graph comes back identical: that is the facilitator's reset. It also enforces the lab rules: no `$params`, every path bounded, no APOC, no `//` comments inside a statement.
 
 ## Delivering it
 
@@ -109,7 +114,7 @@ make rehearsal-down N=4
 
 ## The 45-minute lab
 
-The demo queries are the **reference**. The lab attendees run is a cut of them: **17 statements in five parts**, plus {{f stretch_count}} optional stretch challenges. Everything runs in Neo4j Browser. **No Bloom is needed.**
+The demo queries are the **reference**. The lab attendees run is a cut of them: **17 statements in five parts**, plus {{f stretch_count}} optional stretch challenges. Everything runs in Neo4j Browser. **Neither Bloom nor GDS is needed for the core lab.**
 
 | Minutes | Part | Steps | Queries |
 |---|---|---|---|
@@ -121,7 +126,9 @@ The demo queries are the **reference**. The lab attendees run is a cut of them: 
 | 38 to 43 | **5. What do we do?**: what changed, what routing costs | 15 to 16 | `B8` `B7b` |
 | 43 to 45 | The decision (presenter) | | |
 
-**Stretch, not in the 45:** `B3` `B2d` `B4` `B4b` `B5` `B6` `B7` `B7c` `B9` `B10`, and the easter egg (`B11a` `B11b`; see STORYLINE.md, **spoilers**).
+**Stretch, not in the 45:** `B3` `B2d` `B4` `B4b` `B5` `B6` `B7` `B7c` `B9` `B10`, the easter egg (`B11a` `B11b`; see STORYLINE.md, **spoilers**), and two that need GDS: `G1` (live PageRank, and watch it move when you change the link) and `G2` (communities against the org chart).
+
+**Presenter-only extras:** up to three Bloom pictures during the lab ([BLOOM-GUIDE.md](BLOOM-GUIDE.md)) and one live GDS statement, each about two minutes, taken from the close.
 
 The guide is [LAB-GUIDE.pdf](LAB-GUIDE.pdf) (print, zip) and [LAB-GUIDE.md](LAB-GUIDE.md) (copy-paste).
 
@@ -150,10 +157,13 @@ It is **deliberately messy**: {{f dep_unclassified}} dependencies nobody classif
 | B9 | Of {{f radius_components}} components in the radius, {{f rb_none}} have no runbook, {{f rb_stale}} a stale one, {{f rb_current}} a current one |
 | B10 | GDS PageRank ranks `{{f pr_top}}` first, above `{{f pr_second}}` |
 | B11 | *There is a second hotspot. Spoilers are in STORYLINE.md* |
+| **G1** | Live PageRank equals the stored one: `profile-cache` ranks {{f pr_live_cache_rank}}. **Mark the link soft and run it again:** `customer-profile-svc` falls from rank 1 to {{f pr_soft_profile_rank}} and `profile-cache` to {{f pr_soft_cache_rank}}, while the stored score does not move |
+| **G2** | `profile-cache`'s community: {{f comm_cache_components}} components owned by {{f comm_cache_teams}} teams; {{f cause_owner}}, who owns the cache, owns {{f comm_cache_owner_owns}} of them |
+| **P1 to P8** | Bloom phrases, each a picture of one query. The blast radius is {{f bloom_p1_nodes}} nodes, shrinking to {{f bloom_p1_soft_nodes}} when the link is soft |
 
 ## Not built yet
 
-The scripts to load and check 60 attendee databases (the facilitator guide has a tested check-in loop and the single-database reset, but not a loader for all 60), fill-in-the-blank variants, and a Bloom/Explore exercise. Studio's Explore is running locally but nothing has been designed or tested in it. **Nothing has been run with real people yet**, nor on the JPMC sandbox itself; the facilitator guide lists what is still to confirm.
+The scripts to load and check 60 attendee databases (the facilitator guide has a tested check-in loop and the single-database reset, but not a loader for all 60), fill-in-the-blank variants, and attendee-facing Bloom steps. **The Bloom phrases' Cypher is tested; Bloom itself never has been opened**, so the perspective is a recipe, not a file. **Nothing has been run with real people yet**, nor on the JPMC sandbox itself; the facilitator guide lists what is still to confirm.
 
 ## Notes
 

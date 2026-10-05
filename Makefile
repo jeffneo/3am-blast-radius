@@ -4,13 +4,14 @@
 include .env
 export
 
-.PHONY: help up down reset load build verify verify-dev docs rehearsal rehearsal-down shell logs urls
+.PHONY: help up down reset load build verify verify-plain verify-dev docs rehearsal rehearsal-down shell logs urls
 
 help:
 	@echo "make up          start Neo4j (APOC + GDS Enterprise) and Enterprise Studio"
 	@echo "make load        load graph/load.cypher into the '$(NEO4J_DATABASE)' database"
 	@echo "make build       regenerate the graph, score it with GDS, reload (build/build.sh)"
 	@echo "make verify      all queries on a clean Neo4j 5.26 (the lab target); needs Docker"
+	@echo "make verify-plain  the same on a server WITHOUT the GDS plugin (skips the GDS statements)"
 	@echo "make verify-dev  the same checks on the dev server version ($(NEO4J_IMAGE))"
 	@echo "make docs        regenerate README, STORYLINE, MODEL, the lab and facilitator guides and their PDFs from the recorded results"
 	@echo "make rehearsal  N attendee-shaped databases (lab-user01..) on the dev stack, to rehearse Part 4 together: make rehearsal N=4"
@@ -33,6 +34,9 @@ build:
 
 verify:
 	python3 build/verify.py
+
+verify-plain:
+	python3 build/verify.py --no-gds
 
 verify-dev:
 	python3 build/verify.py --image $(NEO4J_IMAGE)

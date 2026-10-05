@@ -1,0 +1,17 @@
++-----------------------------------------------------------------------------------------------------------+
+| components | teams | biggest_owner        | biggest_owner_owns | owned_by_cache_owner | has_profile_cache |
++-----------------------------------------------------------------------------------------------------------+
+| 36         | 9     | "Payments Platform"  | 15                 | 2                    | TRUE              |
+| 32         | 8     | "Core Banking"       | 14                 | 0                    | FALSE             |
+| 22         | 8     | "Wealth"             | 9                  | 2                    | FALSE             |
+| 19         | 7     | "Fraud & Risk"       | 7                  | 1                    | FALSE             |
+| 17         | 4     | "Cards"              | 10                 | 0                    | FALSE             |
+| 17         | 4     | "Cloud Platform"     | 8                  | 0                    | FALSE             |
+| 17         | 6     | "Merchant Services"  | 5                  | 2                    | FALSE             |
+| 13         | 5     | "Lending"            | 6                  | 4                    | FALSE             |
+| 13         | 5     | "Messaging Platform" | 7                  | 0                    | FALSE             |
+| 8          | 2     | "Treasury Tech"      | 6                  | 0                    | FALSE             |
+| 6          | 3     | "Marketing Tech"     | 3                  | 2                    | FALSE             |
++-----------------------------------------------------------------------------------------------------------+
+
+11 rows

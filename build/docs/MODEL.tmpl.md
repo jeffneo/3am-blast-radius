@@ -106,12 +106,12 @@ Tap to pay ─▶ card-auth-svc ─▶ fraud-scoring-svc ┈┈(soft, with fallb
 
 ## GDS scores, and why they are properties
 
-The JPMC sandbox runs Neo4j 5.26 with no Graph Data Science. So `build/build.sh` computes them once, in the dev stack, and bakes them into `load.cypher` as ordinary properties:
+The lab was designed for a sandbox without Graph Data Science, and the core lab still has to work if it turns out not to be there. So `build/build.sh` computes the scores once, in the dev stack, and bakes them into `load.cypher` as ordinary properties:
 
 - **`pagerank`**: PageRank over the hard dependencies, flowing from a dependent to what it needs. High means *a lot of the estate leans on this*.
 - **`cluster_id`**: Louvain communities over the same edges, ignoring direction, renumbered by size (1 = largest).
 
-The lab never says "run an algorithm". It says "this property came from one, and here's what it shows" (B10).
+The core lab never says "run an algorithm". It says "this property came from one, and here's what it shows" (B10). **Where GDS is available**, stretch challenges S12 and S13 (`queries/gds.cypher`) run the same two algorithms live, as read-only statements that project the *current* hard dependencies into memory, run, and drop the projection. After you change the graph the stored property is stale and the live score is not; S12 shows that. On 5.26 with GDS {{f gds_version}}, `concurrency: 1` makes Louvain repeatable.
 
 ## Conventions
 

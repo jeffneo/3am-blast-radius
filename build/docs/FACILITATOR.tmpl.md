@@ -13,8 +13,8 @@
 |---|---|
 | **Audience** | About 60 JPMorgan Chase engineers, Columbus. Mixed Cypher experience; assume most have none |
 | **Slot** | 60 minutes: a 45-minute lab inside it |
-| **Where it runs** | Each attendee's own database, in **Neo4j Browser** on their corporate laptop. **Neo4j 5.26, APOC available, no GDS, no Bloom.** Nothing to install |
-| **What they do** | Copy, paste and read {{f ladder_queries}} queries, then **change the graph themselves** (Part 4) and watch the answer move. {{f stretch_count}} optional stretch challenges |
+| **Where it runs** | Each attendee's own database, in **Neo4j Browser** on their corporate laptop. **Neo4j 5.26, APOC available.** GDS and Bloom are expected too, but **the core lab uses neither**, so it still runs if either turns out not to be there. Nothing to install |
+| **What they do** | Copy, paste and read {{f ladder_queries}} queries, then **change the graph themselves** (Part 4) and watch the answer move. {{f stretch_count}} optional stretch challenges, two of which (S12, S13) need GDS |
 | **The story** | A fictional bank. A "tier 3" cache pages you at 3 a.m. Through one link nobody ever classified, it sits under **up to {{f journeys_worst}} of {{f journeys}} customer journeys** |
 | **The graph** | {{n nodes}} nodes, {{n relationships}} relationships. Fictional throughout |
 
@@ -43,6 +43,8 @@ The attendee guide counts minutes from the start of the lab. Add the opening and
 | 0:58 | | Buffer | |
 
 **Those are estimates.** Nobody has run this with a room yet (see section 9). The close has seven minutes of give in it for a reason.
+
+**Optional beats.** Up to three Bloom pictures ([BLOOM-GUIDE.md](BLOOM-GUIDE.md)) and one live GDS statement can go on the big screen, at about two minutes each. They are marked **Optional** in the run of show. **Take their time from the close, never from Part 4, and drop them first when you are behind.**
 
 ### Who you need
 
@@ -74,10 +76,12 @@ The attendee guide counts minutes from the start of the lab. Add the opening and
 |---|---|---|
 | Does each attendee's login **open on their own database**? | Every query runs without naming one. If it opens `neo4j` or another database, every query returns nothing | Browser lets the user pick a database in the top bar; each attendee would do that once. Slower, and error-prone with 60 people |
 | **Who loads the 60 databases, and how?** | `graph/load.cypher` is pure Cypher: {{f load_kb}} kB, {{f load_statements}} statements, no files, no plugins. It runs in seconds per database | If only a Cypher console is available, the batches can be pasted statement by statement. Painful; avoid |
+| **GDS: which version and edition, and may non-admin users run it?** | S12 and S13 call `gds.*`. We tested GDS {{f gds_version}} on 5.26, **unlicensed**, as a non-admin user: it works. JPMC's version, edition, procedure permissions and memory limits are unknown | The core lab doesn't need it. S12 and S13 fail cleanly (an error before anything is written). Skip them |
+| **Bloom: which version, and how are perspectives and search phrases managed?** | The Bloom guide is **untested in Bloom**. Whether non-admins can save phrases with custom Cypher and parameters, and whether a perspective can be shared to 60 users, decide whether attendees get Bloom at all | Bloom stays presenter-only, on your own database |
 | **Who can re-run the loader for one database during the session?** | It is the only real reset (section 5) | Without it, a broken database stays broken. Part 4's own reset (Step 14) still works |
 | Do attendees have **schema privileges** in their database? | The loader begins by creating constraints and indexes. Only matters if attendees re-run it themselves, which we don't plan | Not needed otherwise. We tested a non-admin user with `GRANT ALL` on their own database, which works |
 | **Query time limits and server load** with 60 people at once | Every query finished in well under a second on a quiet test server. JPMC's shared server is unmeasured | Ask what the transaction timeout is. If someone sets it below a few seconds, tell us |
-| Can the **pre-event email carry a repo link or zip**, and do they get through security filtering? | Attendees need `LAB-GUIDE.md` or the zip to copy queries from | Print the PDF and read from it. **Do not copy queries out of the PDF**; see section 6 |
+| Can the **pre-event email carry a repo link or zip**, and do they get through security filtering? | Attendees need `LAB-GUIDE.md` or the zip to copy queries from | Print the PDF and read from it. Copying from the PDF works in the viewers we tested (below), but is the less certain route; see section 6 |
 | **Which Browser version** is deployed, and can people paste into it? | We tested a current Browser. Older ones look different | Screenshots in the guide won't match; the text still will |
 | Will the **room network** reach the Browser URL? | Same laptop and network as the readiness check | Run the readiness check from the room the day before, if possible |
 
@@ -88,8 +92,10 @@ We tested on a clean Neo4j 5.26 laid out like the sandbox. **We have not run on 
 1. Log in to Neo4j Browser. Run `R0`. It should show **{{f ready_components}} components** and **{{f ready_incidents}} incidents**.
 2. Run `B1b`. Expect {{f storm_alerts}} rows.
 3. Run `H1`, `H2`, `H3`, `H6`, `H7` (Part 4). Expect `{{f journeys_worst}}` and `{{f journeys_proven}}` at `H1` and `H7`; `{{f journeys_if_soft}}` and `{{f journeys_proven}}` at `H3`.
+4. **If GDS is expected:** run `G0` (`queries/gds.cypher`): it returns the plugin version. Then run `G1`: six rows, with `profile-cache` at rank {{f pr_live_cache_rank}}. The first GDS call can take about a second. If `G1` says there is no procedure called `gds.graph.drop`, GDS isn't there; if it says you are not allowed, the user lacks the permission.
+5. **If Bloom is expected:** build the perspective and add `P1` and `P2` (see the Bloom guide). `P1` should draw {{f bloom_p1_nodes}} nodes, `P2` {{f bloom_p2_nodes}}.
 
-That is five minutes, and it exercises login, home database, read access, write access, and the lab's slowest queries.
+That is about ten minutes, and it exercises login, home database, read access, write access, GDS, Bloom and the lab's slowest queries.
 
 ### Countdown
 
@@ -150,6 +156,7 @@ Each step: **do** what is on the screen, **say** the idea (in your own words), *
 - **Do:** Run it.
 - **Land:** **{{f services_proven}}** proven, **{{f services_assumed}}** assumed, **{{f services_degrade}}** degrade only.
 - **Say:** *"Proven means every link on the path is a known hard dependency. Assumed means a link nobody ever classified is holding it on the list. That is {{f assumed_pct}} percent of the failing list resting on a guess. Hold that thought."*
+- **Optional, Bloom (about 2 minutes):** run phrase **P1**, `blast radius of profile-cache`: {{f bloom_p1_nodes}} nodes, the table as a picture, amber lines for the assumed links.
 - **Watch for:** The distinction between **`confirmed`** (provable) and **`hard`** (assume the worst) is the spine of the lab. If the room is lost, stop and say it once more.
 
 **Step 5 · `B3b`** (about 4 minutes)
@@ -171,6 +178,7 @@ Each step: **do** what is on the screen, **say** the idea (in your own words), *
 - **Land:** **`{{f link_change}}`**, {{f link_first_seen}}, **{{f link_months}} months ago**, by {{f link_team}}, **no risk review**.
 - **Say:** *"Nobody did anything wrong. A team resolved group membership through the profile service. A perfectly normal change. It just never made it into the catalog."*
 - **Watch for:** Don't let it turn into blame. The point is the process gap, not the team.
+- **Optional, Bloom (about 2 minutes):** phrase **P2**, `chain for Log in`: {{f bloom_p2_nodes}} nodes, one amber link.
 
 **Step 8 · `B6c`: the replay** (about 5 minutes) **· the payoff of Part 3**
 - **Predict first:** *"How many journeys depended on the cache the day before that change?"*
@@ -191,6 +199,8 @@ This is the reason the lab is hands-on. **Slow down; do it in order; keep the fl
 **Step 11 · `H3`** (**Predict first:** *"What's the worst case now?"*)
 - **Land:** **{{f journeys_if_soft}}** journeys in the worst case; proven still {{f journeys_proven}}.
 - **Say:** *"That is exactly the number from the day before the change. Tonight looks like before `{{f link_change}}`."*
+- **Optional, Bloom (about 1 minute):** run **P1** again. The picture shrinks from {{f bloom_p1_nodes}} nodes to **{{f bloom_p1_soft_nodes}}**, the same size as the day before the change.
+- **Optional, GDS (about 2 minutes), if the smoke test passed:** run **G1** (`queries/gds.cypher`). `customer-profile-svc` drops from rank 1 to {{f pr_soft_profile_rank}} and `profile-cache` from {{f pr_live_cache_rank}} to {{f pr_soft_cache_rank}}, and the `precomputed` column does *not* move: *"A stored score is a snapshot."* **The same query, run again after Step 14, must match the first run.** If you ran it, do it before the gate below.
 
 **Step 12 · `H4`**: *"Now the opposite. It fails when the profile service is slow. **Hard.**"*
 
@@ -281,14 +291,17 @@ then run the loader. (That also removes their readiness marker; ask them to re-r
 | Error saying something **"is not allowed"** on `neo4j`; **"Database not found"**; access denied | Login opened the wrong database | Same |
 | **Syntax error** | Part of the query was missed when copying | Copy the whole block again, first line to the `;` |
 | They **typed** it and it fails | Typos | Paste instead. Queries are written to be pasted |
-| Pasted from the **PDF** and it fails | Copying out of a PDF can lose line breaks, and we haven't tested what else it changes | Use `LAB-GUIDE.md` or `queries/*.cypher` from the repo or zip. Lab queries carry no `//` comments, which helps, but it is still the unreliable route |
+| **GDS error** in S12 or S13: "no procedure `gds.graph.drop`" | The database has no GDS | Nothing was changed. Skip S12 and S13 |
+| **GDS error** saying they are **not allowed** to run it | They lack the permission | Tell the ops contact. Skip |
+| S12 shows different ranks | They changed the graph and didn't run Step 14 | `H6`, then run S12 again |
+| Pasted from the **PDF** and it fails | Copying from a PDF depends on the viewer. **Tested and working:** macOS Preview/Safari, and Chrome and Edge's viewer (the same engine). **Not tested:** Adobe Acrobat and others. The first version broke on every underscore in Preview, which pasted `FIRED_ON` as three lines | Use `LAB-GUIDE.md` or `queries/*.cypher` from the repo or zip. Lab queries carry no `//` comments, so pasted line breaks are harmless |
 | A query **keeps spinning** | Usually an edited query with a long path, or the server is busy | Stop button on the frame. Lab queries take well under a second |
 | **Table is tiny, columns clipped** | Browser window or zoom | Collapse the left sidebar; zoom out |
 | A **tour or tooltip** pops up over the editor | Newer Browser versions show a welcome tour | Dismiss it. Ignore the `:welcome` frame |
 | Several result frames **piled up** | They're running without clearing | `:clear` |
 | **Numbers differ** after Part 4 | Step 14 never ran | `H6` then `H7` |
 | **They ran `R0` twice** | Harmless | Each run adds a `:Checkin` marker. Nothing is wrong |
-| "Can I use **Bloom**?" | | Not for this lab. Not tested |
+| "Can I use **Bloom**?" | Bloom is presenter-only in the core lab | The presenter shows pictures from it. See `BLOOM-GUIDE.md` |
 
 **Escalate to the lead, not the ops contact,** if the same problem appears for five or more people at once. That's the server or the instructions, not the individual.
 
@@ -306,7 +319,7 @@ then run the loader. (That also removes their readiness marker; ask them to re-r
 | **38** | Starting Step 15 | Run Step 15 only; mention routing in words |
 | **43** | The decision | Skip Step 16 if you haven't run it, **not** the decision |
 
-**Cut order, if you must:** Step 3 (early), then Step 16, then Step 15 (late). **Never cut:** Steps 1, 2, 4, 6, 7, 8, or any of Part 4.
+**Cut order, if you must:** the optional Bloom and GDS beats first, then Step 3 (early), then Step 16, then Step 15 (late). **Never cut:** Steps 1, 2, 4, 6, 7, 8, or any of Part 4.
 
 **Waiting for the room.** Ask "who has the result?" and **wait for most hands, not all.** Helpers go to the rest. If a quarter of the room is still stuck after two minutes, ask them to *watch* and keep going. The attendee guide told them they won't miss the point.
 
@@ -336,9 +349,11 @@ Two traps:
 
 **"Why not a SQL recursive query?"** You can write the traversal. The graph's advantage shows when you add the next question: owners, changes, runbooks, history. Each is another hop, not another join design.
 
+**"Why not use an algorithm to find the important link?"** For *this* question we didn't: counting the journeys above each unclassified link (Step 6) is exact and explainable, and it separates *proven* from *assumed*, which a score can't. PageRank is the independent cross-check, not the answer.
+
 **"Is `confirmed` / `hard` built into Neo4j?"** No. Those are two flags this lab *derives* from `critical` and `active` on each dependency. The modelling choice is the point: *unknown* is not *soft*, so the graph keeps both a provable best case and a worst case you must plan for.
 
-**"Where did PageRank come from? Can we run GDS?"** Computed once with Graph Data Science on our side, then shipped as an ordinary property, because the sandbox has no GDS. Only S10 uses it; it's an independent check that doesn't rely on anything declared.
+**"Where did PageRank come from? Can we run GDS?"** The stored `pagerank` (S10) was computed once with Graph Data Science, so the core lab works on a database without it. **S12 runs it live**, and S13 runs Louvain communities. Both build a temporary in-memory copy of the graph, run, and remove it; they write nothing.
 
 **"Is the routing penalty real?"** No. The direction is plausible; the size is built into the generated data. Say so before they ask.
 
@@ -365,8 +380,12 @@ Two traps:
 | **Neo4j Browser**: login to the home database, `R0`, `B1b` | **Tried once**, on a current Browser against the dev stack |
 | The other steps **through Browser** | **Not tried.** They ran through `cypher-shell` as the same kind of user |
 | **JPMC's sandbox**, their Browser version, their network and server load | **Not tested.** See section 3 |
+| **Copying queries out of the PDF** | **Tested** on every build in macOS PDFKit (Preview, Safari), and checked once in Chrome's engine. **Not tested** in Adobe Acrobat or on Windows |
 | **The timings** in this guide | **Estimates.** No room has run it. Your rehearsal is the first data |
-| **Bloom / Explore** | Not used and not tested |
+| **GDS** (S12, S13): the statements on Neo4j 5.26 with the GDS {{f gds_version}} plugin, **unlicensed**, as a non-admin user; and that the live PageRank equals the stored one, moves when the link is marked soft, and is unchanged when marked hard | **Tested**, every build. Two attendees using the same graph name did not collide (checked once, on the dev stack) |
+| **JPMC's GDS** (version, edition, permissions, memory) | **Not tested** |
+| **Bloom phrases**: the Cypher runs as an attendee, returns paths, and the picture is the stated size | **Tested**, every build |
+| **Bloom itself**: the perspective, adding a phrase, the look of any picture | **Not tested. Nobody has opened Bloom.** See the Bloom guide |
 
 **What the lab cannot say.** It does not say real estates look like this, or how a bank should build things, or that Neo4j beats a service catalog. It shows what a connected question looks like.
 
@@ -419,6 +438,9 @@ Know these. Everything is computed from the tested results, so it's right for th
 | **S5** | {{f b5_mismatch}} mismatches; `profile-cache` first: declared tier {{f cache_tier}}, {{f cache_worst}} journeys worst case |
 | **S7** | {{f cache_incidents}} cache incidents, {{f cache_teams}} teams, **{{f cache_to_owner}}** to the owner, {{n cache_minutes}} minutes |
 | **S10** | PageRank: `{{f pr_top}}` first, then `{{f pr_second}}` |
+| **S12** | Live PageRank: `profile-cache` rank {{f pr_live_cache_rank}} ({{f pr_live_cache_score}}). **Link soft:** `customer-profile-svc` rank 1 → {{f pr_soft_profile_rank}} ({{f pr_live_profile_score}} → {{f pr_soft_profile_score}}); `profile-cache` {{f pr_live_cache_rank}} → {{f pr_soft_cache_rank}} ({{f pr_live_cache_score}} → {{f pr_soft_cache_score}}). Link hard: unchanged |
+| **S13** | `profile-cache`'s community: {{f comm_cache_components}} components, {{f comm_cache_teams}} teams; {{f comm_cache_biggest}} owns {{f comm_cache_biggest_owns}}, {{f cause_owner}} owns {{f comm_cache_owner_owns}} |
+| **Bloom** | P1 {{f bloom_p1_nodes}} nodes ({{f bloom_p1_soft_nodes}} after the soft edit); P2 {{f bloom_p2_nodes}}; P3 {{f bloom_p3_nodes}}; P4 {{f bloom_p4_nodes}}; P5 {{f bloom_p5_nodes}}; P6 {{f bloom_p6_nodes}}; P7 {{f bloom_p7_nodes}} ({{f bloom_links_all}} links); P8 {{f bloom_p8_nodes}} |
 | **S11** | `{{f egg_cert}}`: {{f egg_days}} days, no renewal, owner disbanded, {{f egg_services}} services, {{f egg_teams}} teams, {{f egg_journeys}} journeys |
 
 ## Appendix B: operating commands
@@ -444,6 +466,7 @@ done
 | The lab queries, in order | `queries/demo-queries.cypher`, `queries/hands-on.cypher`, `queries/readiness.cypher` |
 | The whole graph | `graph/load.cypher` |
 | Prove it still works | `make verify` (about 90 seconds; needs Docker) |
+| The GDS statements, and the Bloom phrases | `queries/gds.cypher` (`G0` to `G2`), `queries/bloom.cypher` (`P1` to `P8`); the Bloom guide is `BLOOM-GUIDE.md` |
 | Regenerate the documents | `make docs` |
 | Rehearsal databases | `make rehearsal N=4`, `make rehearsal-down N=4` |
 

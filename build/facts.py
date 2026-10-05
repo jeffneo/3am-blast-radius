@@ -221,6 +221,33 @@ def build() -> dict:
     sso = [r for r in decoys if r["certificate"] == "sso.idp.signing"][0]
     f["egg_decoy_name"], f["egg_decoy_journeys"] = sso["certificate"], sso["journeys"]
     f["labels_shown"] = len(rows("B11a"))
+
+    # Live GDS (G1, G2), run on the plugin that ships in the 5.26 image, unlicensed
+    f["gds_version"] = dict(l.split("=") for l in (EXPECTED / "GDS.txt").read_text().split())["gds_version"]
+    g1, g1s, g1h = rows("G1"), rows("G1s"), rows("G1h")
+    at = lambda rs, name: [r for r in rs if r["component"] == name][0]
+    f["pr_live_cache_rank"], f["pr_live_cache_score"] = at(g1, "profile-cache")["rank"], at(g1, "profile-cache")["live_pagerank"]
+    f["pr_live_profile_score"] = at(g1, "customer-profile-svc")["live_pagerank"]
+    f["pr_soft_cache_rank"], f["pr_soft_cache_score"] = at(g1s, "profile-cache")["rank"], at(g1s, "profile-cache")["live_pagerank"]
+    f["pr_soft_profile_rank"], f["pr_soft_profile_score"] = at(g1s, "customer-profile-svc")["rank"], at(g1s, "customer-profile-svc")["live_pagerank"]
+    f["pr_soft_stale_profile"] = at(g1s, "customer-profile-svc")["precomputed"]
+    f["pr_soft_top"] = g1s[0]["component"]
+    f["pr_live_matches_stored"] = all(r["live_pagerank"] == r["precomputed"] for r in g1)
+    f["pr_hard_same"] = g1h == g1
+    g2 = rows("G2")
+    cc = [r for r in g2 if r["has_profile_cache"]][0]
+    f.update(comm_cache_components=cc["components"], comm_cache_teams=cc["teams"], comm_cache_biggest=cc["biggest_owner"],
+             comm_cache_biggest_owns=cc["biggest_owner_owns"], comm_cache_owner_owns=cc["owned_by_cache_owner"],
+             comm_shown=len(g2), comm_largest=g2[0]["components"])
+    f["comm_multi_team"] = sum(1 for r in g2 if r["teams"] > 1)
+
+    # Bloom phrases (P1..P8): the size of each picture, recorded by the verifier
+    for i in range(1, 9):
+        r = one(f"P{i}")
+        f[f"bloom_p{i}_paths"], f[f"bloom_p{i}_nodes"], f[f"bloom_p{i}_rels"] = r["paths"], r["nodes"], r["relationships"]
+    p1s = one("P1s")
+    f["bloom_p1_soft_nodes"], f["bloom_p1_soft_rels"] = p1s["nodes"], p1s["relationships"]
+    f["bloom_links_all"] = f["bloom_p7_paths"]
     return f
 
 
@@ -247,6 +274,16 @@ def check(f: dict, b1b: list[dict]) -> None:
         "the wildcard's owner was disbanded": "disbanded" in f["egg_owner"],
         "Tap to pay's service is under the wildcard (its card-auth-svc)": "card-auth-svc" in E.WILDCARD["used_by"],
         "exactly one decoy is manual, the rest renew": f["egg_decoys"] - f["egg_decoys_renewing"] == 1,
+        "live PageRank equals the stored property before any edit": f["pr_live_matches_stored"],
+        "marking the link soft drops profile-cache down the live PageRank": f["pr_soft_cache_rank"] > f["pr_live_cache_rank"],
+        "marking the link soft drops customer-profile-svc from first": f["pr_soft_profile_rank"] > 1,
+        "after the soft edit the stored PageRank is stale": f["pr_soft_stale_profile"] != f["pr_soft_profile_score"],
+        "marking the link hard leaves live PageRank unchanged": f["pr_hard_same"],
+        "the cache's community spans several teams": f["comm_cache_teams"] > 1,
+        "the largest owner in the cache's community is not the cache's owner": f["comm_cache_biggest"] != f["cause_owner"],
+        "the Bloom blast radius is the B2 radius plus the cache itself": f["bloom_p1_nodes"] == f["services_worst"] + 1,
+        "the soft edit shrinks the Bloom blast radius": f["bloom_p1_soft_nodes"] < f["bloom_p1_nodes"],
+        "Bloom shows every unclassified link, B2c only its top six": f["bloom_links_all"] >= f["links_ranked"],
         "the loudest decoy renews itself": any(r["certificate"] == "sso.idp.signing" and r["renews_itself"] == "yes"
                                               for r in rows("B11b")),
     }

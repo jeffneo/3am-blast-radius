@@ -12,6 +12,7 @@ Templates -> documents:
     build/lab-guide.template.md   -> LAB-GUIDE.md      (the attendee guide)
     build/docs/STORYLINE.tmpl.md  -> STORYLINE.md
     build/docs/FACILITATOR.tmpl.md -> FACILITATOR-GUIDE.md (for the people delivering; spoilers)
+    build/docs/BLOOM.tmpl.md      -> BLOOM-GUIDE.md      (the eight Bloom search phrases)
     build/docs/README.tmpl.md     -> README.md
     build/docs/MODEL.tmpl.md      -> graph/MODEL.md
 
@@ -31,10 +32,11 @@ DOCS = [
     ("build/lab-guide.template.md", "LAB-GUIDE.md"),
     ("build/docs/STORYLINE.tmpl.md", "STORYLINE.md"),
     ("build/docs/FACILITATOR.tmpl.md", "FACILITATOR-GUIDE.md"),
+    ("build/docs/BLOOM.tmpl.md", "BLOOM-GUIDE.md"),
     ("build/docs/README.tmpl.md", "README.md"),
     ("build/docs/MODEL.tmpl.md", "graph/MODEL.md"),
 ]
-QUERY_FILES = ["readiness.cypher", "demo-queries.cypher", "hands-on.cypher"]
+QUERY_FILES = ["readiness.cypher", "demo-queries.cypher", "hands-on.cypher", "gds.cypher", "bloom.cypher"]
 PLACEHOLDER = re.compile(r"\{\{(query|result|f|n) ([\w.*-]+)\}\}")
 # Write summaries cypher-shell appends ("Added 1 nodes" on 5.26, "Created 1 node" on 2026.x).
 SUMMARY_LINE = re.compile(r"^(added|set|removed|deleted|created)\b.*\d.*$", re.I | re.M)

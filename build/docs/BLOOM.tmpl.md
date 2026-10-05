@@ -1,0 +1,147 @@
+# 3 a.m. Blast Radius: Bloom Guide
+
+**For the people delivering the session. Eight saved search phrases that turn the lab's key queries into pictures.** The Cypher is tested; **Bloom itself has not been tried** (see the status box).
+
+> **Status.** The Cypher in every phrase below runs on Neo4j 5.26 as an attendee-shaped user, returns paths, and produces the picture size stated. `build/verify.py` checks that on every build. **Nothing here has been opened in Bloom**: there is no Bloom in the dev stack. The *perspective* (colours, sizes, captions) and the *steps for adding a phrase* are written from how Bloom is documented to work, and the button names change between versions. Treat them as a recipe to check, not a script to trust. Try it on JPMC's Bloom a week ahead.
+
+## Why these are rewrites, not copies
+
+The lab's queries mostly return **tables** (numbers, names, counts). Bloom draws **nodes and relationships**, so a table-shaped query shows nothing useful there. Each phrase below returns **paths** (a column called `p`), and Bloom draws everything on them. Two consequences:
+
+- **Phrases take `$parameters`.** That is what Bloom's search phrases are for, and why these queries break the lab's no-`$params` rule, which exists for Neo4j Browser. Each phrase lists the default value used to test it.
+- **A picture has no numbers on it.** The tables, the ranges and the routing statistics stay in Browser. Bloom is for the *shape*: the radius, the chain, the stars.
+
+**Part 4 stays in Browser.** Bloom's job there is to show the answer moving: run the edit (`H2`) in Browser, refresh the blast-radius picture in Bloom, and watch it shrink.
+
+## What is worth showing, and when
+
+You have no spare time in the 45 minutes. A Bloom beat costs about two minutes on the big screen. **Take the time from the close, never from Part 4.** Three beats are enough:
+
+| When | Phrase | The line |
+|---|---|---|
+| **After Step 4** (`B2b`) | **P1 blast radius** | *"That table, as a picture. Amber lines are the ones we are only assuming."* |
+| **After Step 7** (`B6b`) | **P2 chain for a journey**, `Log in` | *"Four links from login to a tier-3 cache. One of them is amber: the one nobody classified."* |
+| **After Step 11** (`H3`) | **P1 again** | *"Same phrase, run again: it shrank."* Blast radius **{{f bloom_p1_nodes}} nodes to {{f bloom_p1_soft_nodes}}** after the soft edit |
+
+**For people who finish early:** P3, P4, P5, P6, P7 and P8. P8 is the easter egg as a picture; keep it as a reveal if someone finds the certificate.
+
+**Attendees in Bloom?** Not in the core lab. Each attendee would need the perspective and the eight phrases in their own Bloom, which is real setup risk for 60 people, and nobody has tried it. If JPMC can provision a shared perspective (see "To confirm with JPMC"), the phrases become optional stretch challenges.
+
+---
+
+## The eight phrases
+
+Each block: **what you type in Bloom**, **the Cypher to save**, **what it draws**, **what to point at.** The default parameter value is the one the numbers were measured with.
+
+### P1: the blast radius
+**Phrase:** `blast radius of $component`  ·  **Default:** `profile-cache`
+
+{{query P1}}
+
+**Draws:** {{f bloom_p1_nodes}} nodes and {{f bloom_p1_rels}} relationships ({{f bloom_p1_paths}} paths): the {{f services_worst}} services of `B2`, plus the cache. After the soft edit (`H2`): **{{f bloom_p1_soft_nodes}} nodes, {{f bloom_p1_soft_rels}} relationships**.
+**Point at:** the amber dependency lines (assumed) against the red ones (proven); the single unclassified link that most of the amber hangs from. **Layout:** try a hierarchical layout: the rings of `B2` should show up as rows.
+
+### P2: the chain for one journey
+**Phrase:** `chain for $journey`  ·  **Default:** `Log in`
+
+{{query P2}}
+
+**Draws:** {{f bloom_p2_nodes}} nodes and {{f bloom_p2_rels}} relationships for *Log in*: the journey, the services on its path, and the cache. Try *Send a wire*: several routes, every line red, because it is proven end to end. Try *Tap to pay*: **the picture is empty**, because its link to the cache is soft and the phrase follows only hard dependencies. That empty result is the finding.
+**Point at:** the one amber link. This is `B6` as a picture. Bloom can suggest journey names as you type, if the parameter is set up to.
+
+### P3: have we been here before?
+**Phrase:** `incidents caused by $component`  ·  **Default:** `profile-cache`
+
+{{query P3}}
+
+**Draws:** {{f bloom_p3_nodes}} nodes and {{f bloom_p3_rels}} relationships: the {{f cache_incidents}} incidents the cache caused, the teams their tickets went to, and the team that owns the cache.
+**Point at:** the owner ({{f cause_owner}}) sitting apart from every ticket. *"{{f cache_incidents}} incidents, {{f cache_teams}} teams, and the owner never got one."* This is `B7`, and the best picture of the routing finding.
+
+### P4: who do we page?
+**Phrase:** `teams to page for $component`  ·  **Default:** `profile-cache`
+
+{{query P4}}
+
+**Draws:** {{f bloom_p4_nodes}} nodes and {{f bloom_p4_rels}} relationships: the blast radius with each service's owning team attached. **The largest picture of the eight**; fine for one component, too busy for a bigger one.
+**Point at:** teams coloured as disbanded (see the perspective), which have nobody to page. This is `B4` and `B4b`.
+
+### P5: what changed?
+**Phrase:** `changes near $component`  ·  **Default:** `profile-cache`
+
+{{query P5}}
+
+**Draws:** {{f bloom_p5_nodes}} nodes and {{f bloom_p5_rels}} relationships: changes in the 24 hours before the page that landed on a service in the radius, each with the path to the cache. {{f bloom_p5_paths}} paths for {{f changes_in_radius}} changes, because one change reaches the cache by two routes.
+**Point at:** `{{f change_closest}}`, one hop from the cache, unreviewed. This is `B8`.
+
+### P6: the alert storm
+**Phrase:** `alert storm`  ·  *no parameter*
+
+{{query P6}}
+
+**Draws:** {{f bloom_p6_nodes}} nodes and {{f bloom_p6_rels}} relationships ({{f bloom_p6_paths}} paths): how the alerting components depend on one another, through whatever lies between. The cause is where the paths end.
+**Point at:** the **{{f storm_unrelated}} unrelated alerts are the ones missing**: with no dependency to any other alerting component they have no path, so they do not appear. That absence is the point, but it is subtle on a screen. This is `B1b`; the table is clearer, so use this for people who finished early.
+
+### P7: the unclassified links
+**Phrase:** `unclassified links to $component`  ·  **Default:** `profile-cache`
+
+{{query P7}}
+
+**Draws:** {{f bloom_p7_nodes}} nodes and {{f bloom_p7_rels}} relationships. **Seven links, where `B2c` lists six**: `B2c` shows only the top six by journeys at stake, and Bloom shows all of them.
+**Point at:** the link from `entitlements-svc` to `customer-profile-svc`. In Bloom you can click it and expand what hangs above.
+
+### P8: the second hotspot
+**Phrase:** `who depends on certificate $certificate`  ·  **Default:** `wildcard.internal.bank`
+
+{{query P8}}
+
+**Draws:** {{f bloom_p8_nodes}} nodes and {{f bloom_p8_rels}} relationships: the certificate, its disbanded owner, {{f egg_services}} services and the teams that own them. A star.
+**Point at:** how much hangs off one certificate nobody owns. **Keep this one back** for whoever finds the easter egg (stretch challenge S11), or for the close. Try `api-gateway.external` to see a decoy: a small star, and it renews itself.
+
+---
+
+## The perspective
+
+A **perspective** is how Bloom looks: which labels show, what is written on them, colours and sizes. Bloom can generate one from the database; then adjust. **This is a recommendation, not a tested file.**
+
+| Category | Caption | Look |
+|---|---|---|
+| `Service` | `name` | Colour by `tier` (1 darkest, 3 lightest, no tier grey). Size by `pagerank` |
+| `Datastore` | `name` | Distinct colour from services. Size by `pagerank` |
+| `Team` | `name` | **Grey when `status` is `disbanded`**. Everything else one neutral colour |
+| `Journey` | `name` | Distinct colour; the things customers do |
+| `Incident` | `id` | Small; colour by `impact` (`outage` red, `degraded` amber) |
+| `Change` | `id` | **Red when `risk_review` is false** |
+| `Certificate` | `name` | Distinct colour |
+| `Alert` | `id` | Small |
+| `Runbook`, `Checkin` | | **Hide.** `Checkin` is only the readiness marker |
+
+**Relationships.** All the meaning is in `DEPENDS_ON`. Style it from the **boolean** properties, which are the simplest to rule on:
+
+| Rule | Meaning | Look |
+|---|---|---|
+| `confirmed` is true | Proven hard | Dark red, thick |
+| `hard` is true and `confirmed` is false | **Assumed**: unclassified | Amber, thick |
+| `hard` is false | Soft, or inactive | Grey, thin |
+
+Every other relationship type (`OWNS`, `REQUIRES`, `ROOT_CAUSE`, `ASSIGNED_TO`, `DEPLOYED_TO`, `USES_CERT`, `FIRED_ON`): one thin neutral colour. Hide `AFFECTED`, `COVERS`, `OWNED_BY`: no phrase here needs them.
+
+**Adding a phrase** (check the names against your version): in the perspective, open *Search phrases*, add one, type the phrase text exactly as shown with `$name` for each parameter, paste the Cypher, and make sure the parameter name matches the `$name` in the Cypher. Run it with the default value. If the picture is not the size stated above, stop and look.
+
+## Bloom limits to know
+
+- **Bloom caps how much it will draw.** Every picture here is under {{f bloom_p4_nodes}} nodes, well inside any default, but check the setting before you try a bigger component.
+- **Paths are bounded** (`*1..8`), as in the rest of the lab; everyone's database shares one server.
+- **Bloom can edit data** in some configurations. These phrases only read. Part 4's edits stay in Browser, where the statements restore themselves.
+
+## To confirm with JPMC
+
+None of this is known yet.
+
+| Question | Why it matters |
+|---|---|
+| Which **Bloom version**? | The perspective and phrase screens differ between versions |
+| How are **perspectives** stored and shared: per user, per database, or imported from a file? | Decides whether 60 attendees could use one |
+| Can a **non-admin user save search phrases** that run custom Cypher with parameters? | Some deployments restrict it |
+| Is there any **limit on what Bloom returns**? | Largest picture here: {{f bloom_p4_nodes}} nodes |
+
+**The test.** A week ahead, on JPMC's Bloom with a test account: build the perspective, add P1 and P2, run each with its default. P1 should show {{f bloom_p1_nodes}} nodes and P2 should show {{f bloom_p2_nodes}}. If either differs, stop and tell us: the Cypher is tested, so the difference would be Bloom's.
